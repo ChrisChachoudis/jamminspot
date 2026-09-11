@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+:root {
+  --jm-bg: #0e1414;
+  --jm-surface: #161f1e;
+  --jm-surface-2: #1e2a29;
+  --jm-border: #2a3735;
+  --jm-text: #eef2f1;
+  --jm-text-dim: #9fb0ad;
+
+  --jm-jam: #078f85;
+  --jm-like: #30d158;
+  --jm-skip: #ed4956;
+  --jm-message: #46c7ff;
+  --jm-rewind: #f2a33a;
+
+  --jm-font-ui: "Poppins", system-ui, sans-serif;
+  --jm-font-brand: "Syne", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--jm-bg);
+  color: var(--jm-text);
+  font-family: var(--jm-font-ui);
+}
+
+.brand-title {
+  font-family: var(--jm-font-brand);
+  color: var(--jm-jam);
+  font-size: 2rem;
+  margin: 0 0 4px;
+}
+
+/* --- Auth screens --- */
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--jm-surface);
+  border: 1px solid var(--jm-border);
+  border-radius: 16px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-subtitle {
+  color: var(--jm-text-dim);
+  margin: 0 0 20px;
+  font-size: 0.9rem;
+}
+
+.auth-card label {
+  font-size: 0.8rem;
+  color: var(--jm-text-dim);
+  margin-top: 10px;
+}
+
+.auth-card input,
+.auth-card textarea {
+  background: var(--jm-surface-2);
+  border: 1px solid var(--jm-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--jm-text);
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.auth-card input:focus,
+.auth-card textarea:focus {
+  border-color: var(--jm-jam);
+}
+
+.form-error {
+  color: var(--jm-skip);
+  font-size: 0.85rem;
+  margin: 10px 0 0;
+}
+
+.auth-switch {
+  margin-top: 18px;
+  font-size: 0.85rem;
+  color: var(--jm-text-dim);
+  text-align: center;
+}
+
+.auth-switch a {
+  color: var(--jm-jam);
+}
+
+/* --- Buttons --- */
+
+.btn-jam,
+.btn-skip,
+.btn-message,
+.btn-rewind {
+  border: none;
+  border-radius: 999px;
+  font-family: var(--jm-font-ui);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, opacity 0.15s ease;
+}
+
+.btn-jam:hover,
+.btn-skip:hover,
+.btn-message:hover,
+.btn-rewind:hover {
+  transform: translateY(-1px);
+}
+
+.btn-jam:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-jam {
+  margin-top: 22px;
+  padding: 12px;
+  background: var(--jm-jam);
+  color: white;
+  font-size: 1rem;
+}
+
+.btn-skip {
+  background: var(--jm-skip);
+  color: white;
+}
+
+.btn-message {
+  background: var(--jm-message);
+  color: #04202e;
+}
+
+.btn-rewind {
+  background: var(--jm-rewind);
+  color: #2e1c02;
+}

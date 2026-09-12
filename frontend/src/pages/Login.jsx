@@ -18,7 +18,17 @@ export default function Login() {
     try {
       const { data } = await api.post("/auth/login", { email, password });
       await login(data.token);
-      navigate("/discover");
+
+      // Only land on Discover if there's actually someone to Jam with
+      // right now — otherwise Music is the more useful landing page.
+      let hasDiscoverResults = true;
+      try {
+        const { data: discoverData } = await api.get("/discover");
+        hasDiscoverResults = discoverData.results.length > 0;
+      } catch {
+        // If the check fails, don't block login on it — default to Discover.
+      }
+      navigate(hasDiscoverResults ? "/discover" : "/music");
     } catch (err) {
       setError(err.response?.data?.error || "Login failed");
     } finally {

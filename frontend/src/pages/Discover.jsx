@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client.js";
 import { coverPhotoUrl } from "../utils/media.js";
 
@@ -86,7 +86,20 @@ export default function Discover() {
 
         <div className="p-5">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-bold">{profile.name || "Musician"}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold">{profile.name || "Musician"}</h2>
+              {profile.trackCount > 0 && (
+                <Link
+                  to={`/discography/${profile.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex flex-col items-center text-[9px] text-[var(--jm-text-dim)] hover:text-[var(--jm-jam)]"
+                  title="View discography"
+                >
+                  <span className="text-base leading-none">💽</span>
+                  Discography
+                </Link>
+              )}
+            </div>
             {compatibility && (
               <span className="text-sm font-semibold text-[var(--jm-jam)]">
                 {compatibility.score}% Jam Match

@@ -1,15 +1,37 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { coverPhotoUrl, mediaUrl } from "../utils/media.js";
+import UploadReleaseModal from "../components/UploadReleaseModal.jsx";
 
 export default function Me() {
   const { user, refreshUser } = useAuth();
   const [mediaUploading, setMediaUploading] = useState(false);
   const [mediaError, setMediaError] = useState("");
   const [settingPhotoId, setSettingPhotoId] = useState(null);
+  const [releases, setReleases] = useState([]);
+  const [releaseModalOpen, setReleaseModalOpen] = useState(false);
+  const [releaseError, setReleaseError] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    api.get(`/users/${user.id}/releases`).then(({ data }) => setReleases(data.releases));
+  }, [user?.id]);
 
   if (!user) return null;
+
+  const trackCount = releases.reduce((sum, r) => sum + r.tracks.length, 0);
+
+  async function removeRelease(releaseId) {
+    setReleaseError("");
+    try {
+      const { data } = await api.delete(`/users/me/releases/${releaseId}`);
+      setReleases(data.releases);
+    } catch (err) {
+      setReleaseError(err.response?.data?.error || "Could not remove release");
+    }
+  }
 
   const photo = coverPhotoUrl(user.media, user.profilePhotoId);
 
@@ -67,7 +89,19 @@ export default function Me() {
         </div>
 
         <div className="p-5">
-          <h1 className="text-xl font-bold">{user.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold">{user.name}</h1>
+            {trackCount > 0 && (
+              <Link
+                to={`/discography/${user.id}`}
+                className="flex flex-col items-center text-[10px] text-[var(--jm-text-dim)] hover:text-[var(--jm-jam)]"
+                title="View discography"
+              >
+                <span className="text-lg leading-none">💽</span>
+                Discography
+              </Link>
+            )}
+          </div>
           {user.city && <p className="text-sm text-[var(--jm-text-dim)]">{user.city}</p>}
 
           {user.bio && <p className="text-sm mt-4">{user.bio}</p>}
@@ -175,6 +209,60 @@ export default function Me() {
           </div>
         )}
       </div>
+
+      <div className="mt-8">
+        <h2 className="text-lg font-bold mb-1">Your music</h2>
+        <p className="text-sm text-[var(--jm-text-dim)] mb-4">
+          Upload tracks (MP3 + cover art) to build your discography.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => setReleaseModalOpen(true)}
+          className="block w-full border border-dashed border-[var(--jm-border)] rounded-xl p-6 text-center text-[var(--jm-text-dim)] text-sm cursor-pointer hover:border-[var(--jm-jam)] mb-4"
+        >
+          Upload your music
+        </button>
+
+        {releaseError && <p className="form-error mb-3">{releaseError}</p>}
+
+        {releases.length > 0 && (
+          <div className="space-y-2">
+            {releases.map((release) => (
+              <div
+                key={release._id}
+                className="flex items-center gap-3 bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-xl p-3"
+              >
+                <img
+                  src={mediaUrl({ url: release.coverUrl })}
+                  alt=""
+                  className="w-12 h-12 rounded-lg object-cover"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{release.title}</p>
+                  <p className="text-xs text-[var(--jm-text-dim)]">
+                    {release.tracks.length} track{release.tracks.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeRelease(release._id)}
+                  className="w-7 h-7 rounded-full bg-[var(--jm-surface-2)] text-xs shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {releaseModalOpen && (
+        <UploadReleaseModal
+          onClose={() => setReleaseModalOpen(false)}
+          onUploaded={setReleases}
+        />
+      )}
     </div>
   );
 }

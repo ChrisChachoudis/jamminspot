@@ -48,7 +48,7 @@ app.use((err, req, res, next) => {
   if (err.name === "CastError" || err.name === "ValidationError") {
     return res.status(400).json({ error: "Invalid request" });
   }
-  if (err.name === "MulterError" || /^Only image, video or audio/.test(err.message)) {
+  if (err.name === "MulterError" || err.statusCode === 400) {
     return res.status(400).json({ error: err.message });
   }
   console.error(err);

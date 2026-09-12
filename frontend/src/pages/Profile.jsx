@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client.js";
 import { coverPhotoUrl, mediaUrl } from "../utils/media.js";
 
@@ -47,7 +47,19 @@ export default function Profile() {
         </div>
 
         <div className="p-5">
-          <h1 className="text-xl font-bold">{profile.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold">{profile.name}</h1>
+            {profile.trackCount > 0 && (
+              <Link
+                to={`/discography/${profile.id}`}
+                className="flex flex-col items-center text-[10px] text-[var(--jm-text-dim)] hover:text-[var(--jm-jam)]"
+                title="View discography"
+              >
+                <span className="text-lg leading-none">💽</span>
+                Discography
+              </Link>
+            )}
+          </div>
           {profile.city && <p className="text-sm text-[var(--jm-text-dim)]">{profile.city}</p>}
 
           {profile.bio && <p className="text-sm mt-4">{profile.bio}</p>}

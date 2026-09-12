@@ -4,7 +4,7 @@ import path from "node:path";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadMedia, mediaTypeFromMime, UPLOADS_DIR } from "../middleware/upload.js";
+import { uploadMedia, uploadRelease, mediaTypeFromMime, UPLOADS_DIR } from "../middleware/upload.js";
 import { computeCompatibility } from "../utils/matching.js";
 import {
   SPECIALTIES,
@@ -191,6 +191,77 @@ router.patch(
 
     await user.save();
     res.json({ user: user.toPublicProfile() });
+  })
+);
+
+function titleFromFilename(originalname) {
+  return path.basename(originalname, path.extname(originalname));
+}
+
+// POST /users/me/releases — multipart upload: "cover" (single JPG) + "audio"
+// (one or more MP3s, one release-level title covers a single track, EP or
+// LP alike). Each track's title is taken from its filename.
+router.post(
+  "/me/releases",
+  uploadRelease,
+  asyncHandler(async (req, res) => {
+    const { title } = req.body;
+    if (!title?.trim()) return res.status(400).json({ error: "title is required" });
+
+    const audioFiles = req.files?.audio || [];
+    const coverFile = req.files?.cover?.[0];
+    if (!audioFiles.length || !coverFile) {
+      return res
+        .status(400)
+        .json({ error: "At least one MP3 file and a cover image are required" });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    user.releases.push({
+      title: title.trim(),
+      coverUrl: `/uploads/${req.userId}/releases/${coverFile.filename}`,
+      tracks: audioFiles.map((file) => ({
+        title: titleFromFilename(file.originalname),
+        audioUrl: `/uploads/${req.userId}/releases/${file.filename}`,
+      })),
+    });
+    await user.save();
+
+    res.status(201).json({ releases: user.releases });
+  })
+);
+
+router.delete(
+  "/me/releases/:releaseId",
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const release = user.releases.id(req.params.releaseId);
+    if (!release) return res.status(404).json({ error: "Release not found" });
+
+    const urls = [release.coverUrl, ...release.tracks.map((t) => t.audioUrl)];
+    for (const url of urls) {
+      const filePath = path.join(UPLOADS_DIR, req.userId, "releases", path.basename(url));
+      fs.unlink(filePath, () => {});
+    }
+
+    release.deleteOne();
+    await user.save();
+
+    res.json({ releases: user.releases });
+  })
+);
+
+// GET /users/:id/releases — public discography listing for an artist's profile.
+router.get(
+  "/:id/releases",
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json({ name: user.name, releases: user.releases });
   })
 );
 

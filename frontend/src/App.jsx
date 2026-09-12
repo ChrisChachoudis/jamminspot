@@ -10,6 +10,7 @@ import Friends from "./pages/Friends.jsx";
 import Messages from "./pages/Messages.jsx";
 import Me from "./pages/Me.jsx";
 import Profile from "./pages/Profile.jsx";
+import Discography from "./pages/Discography.jsx";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -72,6 +73,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/discography/:id"
+          element={
+            <ProtectedRoute>
+              <Discography />
             </ProtectedRoute>
           }
         />

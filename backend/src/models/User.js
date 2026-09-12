@@ -16,6 +16,30 @@ const mediaItemSchema = new mongoose.Schema(
   { _id: true }
 );
 
+const releaseTrackSchema = new mongoose.Schema(
+  {
+    title: { type: String, trim: true, required: true },
+    audioUrl: { type: String, required: true },
+  },
+  { _id: true }
+);
+
+// A "release" is one upload of one or more MP3s sharing a single cover
+// image — a single track, or a whole EP/LP, shown grouped in the
+// discography (brief: "like SoundCloud").
+const releaseSchema = new mongoose.Schema(
+  {
+    title: { type: String, trim: true, required: true },
+    coverUrl: { type: String, required: true },
+    tracks: {
+      type: [releaseTrackSchema],
+      validate: (v) => v.length > 0,
+    },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 const locationSchema = new mongoose.Schema(
   {
     // GeoJSON point: [longitude, latitude]
@@ -55,6 +79,11 @@ const userSchema = new mongoose.Schema(
     // References a media[]._id — which uploaded photo is shown as the
     // profile picture. Falls back to the first image in `media` when unset.
     profilePhotoId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    // Discography: releases (single / EP / LP), each a cover + one or more
+    // tracks. Full list is served from a dedicated endpoint, not
+    // toPublicProfile, to keep every other profile payload (Discover,
+    // Friends, Messages) light.
+    releases: [releaseSchema],
 
     onboardingComplete: { type: Boolean, default: false },
     premium: { type: Boolean, default: false },
@@ -82,6 +111,8 @@ userSchema.methods.toPublicProfile = function toPublicProfile() {
     city: this.location?.city,
     media: this.media,
     profilePhotoId: this.profilePhotoId,
+    trackCount:
+      this.releases?.reduce((sum, release) => sum + release.tracks.length, 0) || 0,
     premium: this.premium,
   };
 };

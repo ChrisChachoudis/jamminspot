@@ -2,10 +2,16 @@ import { useEffect, useState } from "react";
 import api from "../api/client.js";
 import TrackRow from "../components/TrackRow.jsx";
 
+const TABS = [
+  { value: "forYou", label: "✨ Picked for you" },
+  { value: "friends", label: "Friends" },
+];
+
 export default function Music() {
   const [friendTracks, setFriendTracks] = useState([]);
   const [forYouTracks, setForYouTracks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("forYou");
 
   useEffect(() => {
     api.get("/music/feed").then(({ data }) => {
@@ -48,29 +54,40 @@ export default function Music() {
     );
   }
 
+  const activeTracks = tab === "forYou" ? forYouTracks : friendTracks;
+
   return (
     <div className="max-w-xl mx-auto p-6">
       <h1 className="text-xl font-bold mb-1">Music</h1>
-      <p className="text-sm text-[var(--jm-text-dim)] mb-6">
+      <p className="text-sm text-[var(--jm-text-dim)] mb-4">
         New tracks from your Friends, then picks matched to your taste.
       </p>
 
-      {friendTracks.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-sm font-semibold text-[var(--jm-text-dim)] mb-2">
-            New from your Friends
-          </h2>
-          <div className="space-y-2">{friendTracks.map(renderTrack)}</div>
-        </div>
-      )}
+      <div className="flex gap-2 mb-6">
+        {TABS.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            onClick={() => setTab(t.value)}
+            className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+              tab === t.value
+                ? "bg-[var(--jm-jam)] text-white"
+                : "bg-[var(--jm-surface-2)] text-[var(--jm-text-dim)] hover:text-[var(--jm-text)]"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-      {forYouTracks.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-[var(--jm-text-dim)] mb-2">
-            ✨ Picked for you
-          </h2>
-          <div className="space-y-2">{forYouTracks.map(renderTrack)}</div>
-        </div>
+      {activeTracks.length > 0 ? (
+        <div className="space-y-2">{activeTracks.map(renderTrack)}</div>
+      ) : (
+        <p className="text-sm text-[var(--jm-text-dim)]">
+          {tab === "forYou"
+            ? "No picks yet — check back once musicians start uploading music."
+            : "No new tracks from your Friends yet."}
+        </p>
       )}
     </div>
   );

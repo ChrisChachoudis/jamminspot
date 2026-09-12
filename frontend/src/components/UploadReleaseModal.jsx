@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import api from "../api/client.js";
 
 // Uploads one "release" — a single track, EP or LP — sharing one cover
@@ -10,7 +10,17 @@ export default function UploadReleaseModal({ onClose, onUploaded }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const trackInputRef = useRef(null);
+  const coverInputRef = useRef(null);
+
   const canSubmit = title.trim() && audioFiles.length > 0 && coverFile && !submitting;
+  const coverPreviewUrl = coverFile ? URL.createObjectURL(coverFile) : null;
+
+  function addTrackFile(e) {
+    const file = e.target.files?.[0];
+    if (file) setAudioFiles((files) => [...files, file]);
+    e.target.value = "";
+  }
 
   function removeAudioFile(index) {
     setAudioFiles((files) => files.filter((_, i) => i !== index));
@@ -68,31 +78,26 @@ export default function UploadReleaseModal({ onClose, onUploaded }) {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Midnight Signal EP"
-          className="w-full bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--jm-jam)] mb-4"
+          className="w-full bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--jm-jam)] mb-5"
         />
 
-        <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1">
-          Tracks (MP3 only — pick one for a single, several for an EP/LP)
+        <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-2">
+          Tracks
         </label>
-        <input
-          type="file"
-          accept="audio/mpeg,.mp3"
-          multiple
-          onChange={(e) => setAudioFiles(Array.from(e.target.files || []))}
-          className="w-full text-sm mb-2"
-        />
+
         {audioFiles.length > 0 && (
-          <ul className="mb-4 space-y-1">
+          <ul className="mb-2 space-y-1.5">
             {audioFiles.map((file, i) => (
               <li
                 key={i}
-                className="flex items-center justify-between text-xs bg-[var(--jm-surface-2)] rounded-lg px-2 py-1"
+                className="flex items-center gap-2 bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl px-3 py-2 text-sm"
               >
-                <span className="truncate">{file.name}</span>
+                <span className="text-base">🎵</span>
+                <span className="flex-1 truncate">{file.name}</span>
                 <button
                   type="button"
                   onClick={() => removeAudioFile(i)}
-                  className="ml-2 text-[var(--jm-text-dim)] hover:text-[var(--jm-skip)]"
+                  className="w-5 h-5 rounded-full bg-black/30 text-xs leading-5 shrink-0"
                 >
                   ✕
                 </button>
@@ -101,15 +106,56 @@ export default function UploadReleaseModal({ onClose, onUploaded }) {
           </ul>
         )}
 
-        <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1">
-          Cover image (JPG only, shared by all tracks)
-        </label>
+        <button
+          type="button"
+          onClick={() => trackInputRef.current?.click()}
+          className="w-full border border-dashed border-[var(--jm-border)] rounded-xl py-4 text-center text-sm text-[var(--jm-text-dim)] hover:border-[var(--jm-jam)] hover:text-[var(--jm-jam)] mb-5"
+        >
+          {audioFiles.length === 0 ? "＋ Upload a track" : "＋ Upload another track (optional)"}
+        </button>
         <input
+          ref={trackInputRef}
+          type="file"
+          accept="audio/mpeg,.mp3"
+          onChange={addTrackFile}
+          className="hidden"
+        />
+
+        <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-2">
+          Cover image
+        </label>
+
+        {coverFile ? (
+          <div className="flex items-center gap-3 bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl p-2 mb-1">
+            <img src={coverPreviewUrl} alt="" className="w-12 h-12 rounded-lg object-cover" />
+            <span className="flex-1 text-sm truncate">{coverFile.name}</span>
+            <button
+              type="button"
+              onClick={() => setCoverFile(null)}
+              className="w-6 h-6 rounded-full bg-black/30 text-xs shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => coverInputRef.current?.click()}
+            className="w-full border border-dashed border-[var(--jm-border)] rounded-xl py-4 text-center text-sm text-[var(--jm-text-dim)] hover:border-[var(--jm-jam)] hover:text-[var(--jm-jam)]"
+          >
+            ＋ Upload cover image
+          </button>
+        )}
+        <input
+          ref={coverInputRef}
           type="file"
           accept="image/jpeg,.jpg,.jpeg"
           onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
-          className="w-full text-sm"
+          className="hidden"
         />
+        <p className="text-xs text-[var(--jm-text-dim)] mt-1.5">
+          One JPG cover, shared by every track in this release.
+        </p>
 
         {error && <p className="form-error mt-3">{error}</p>}
 

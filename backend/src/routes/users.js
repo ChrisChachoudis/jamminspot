@@ -277,13 +277,60 @@ router.delete(
   })
 );
 
+function serializeRelease(release, viewerId) {
+  return {
+    _id: release._id,
+    title: release.title,
+    coverUrl: release.coverUrl,
+    createdAt: release.createdAt,
+    tracks: release.tracks.map((track) => ({
+      _id: track._id,
+      title: track.title,
+      audioUrl: track.audioUrl,
+      genres: track.genres,
+      likeCount: track.likes.length,
+      likedByMe: track.likes.some((id) => id.toString() === viewerId),
+    })),
+  };
+}
+
 // GET /users/:id/releases — public discography listing for an artist's profile.
 router.get(
   "/:id/releases",
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ name: user.name, releases: user.releases });
+    res.json({
+      name: user.name,
+      releases: user.releases.map((r) => serializeRelease(r, req.userId)),
+    });
+  })
+);
+
+// POST /users/:id/releases/:releaseId/tracks/:trackId/like — toggle a like
+// for the current user on someone else's track (brief: like a track).
+router.post(
+  "/:id/releases/:releaseId/tracks/:trackId/like",
+  asyncHandler(async (req, res) => {
+    const artist = await User.findById(req.params.id);
+    if (!artist) return res.status(404).json({ error: "User not found" });
+
+    const release = artist.releases.id(req.params.releaseId);
+    const track = release?.tracks.id(req.params.trackId);
+    if (!track) return res.status(404).json({ error: "Track not found" });
+
+    const idx = track.likes.findIndex((id) => id.toString() === req.userId);
+    let liked;
+    if (idx === -1) {
+      track.likes.push(req.userId);
+      liked = true;
+    } else {
+      track.likes.splice(idx, 1);
+      liked = false;
+    }
+    await artist.save();
+
+    res.json({ liked, likeCount: track.likes.length });
   })
 );
 

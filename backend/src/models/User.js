@@ -23,6 +23,9 @@ const releaseTrackSchema = new mongoose.Schema(
     // Per-track genres (brief: pick a genre per track) — feeds the Music
     // feed's taste-based ranking.
     genres: [{ type: String, enum: GENRES }],
+    // Who liked this track — count + membership feed the Music feed's
+    // popularity signal (brief: "like the YouTube algorithm").
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { _id: true }
 );

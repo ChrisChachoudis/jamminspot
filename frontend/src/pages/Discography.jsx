@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/client.js";
 import { mediaUrl } from "../utils/media.js";
+import LikeButton from "../components/LikeButton.jsx";
 
 export default function Discography() {
   const { id } = useParams();
@@ -77,6 +78,13 @@ export default function Discography() {
                     <p className="text-sm font-medium truncate mb-1">{track.title}</p>
                     <audio controls src={mediaUrl({ url: track.audioUrl })} className="w-full" />
                   </div>
+                  <LikeButton
+                    artistId={id}
+                    releaseId={release._id}
+                    trackId={track._id}
+                    likeCount={track.likeCount}
+                    likedByMe={track.likedByMe}
+                  />
                 </div>
               ))}
             </div>

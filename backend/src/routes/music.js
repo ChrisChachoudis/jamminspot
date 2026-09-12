@@ -3,30 +3,32 @@ import Conversation from "../models/Conversation.js";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { rankReleasesByTaste } from "../ai/musicFeed.js";
+import { rankTracksByTaste } from "../ai/musicFeed.js";
 
 const router = Router();
 router.use(requireAuth);
 
-function releaseGenres(release) {
-  return [...new Set(release.tracks.flatMap((t) => t.genres || []))];
-}
-
-function toFeedItem({ release, owner }, isFriend) {
+function toTrackItem({ track, release, owner }, viewerId) {
   return {
+    trackId: track._id,
+    title: track.title,
+    audioUrl: track.audioUrl,
+    genres: track.genres || [],
+    likeCount: track.likes.length,
+    likedByMe: track.likes.some((id) => id.toString() === viewerId),
     releaseId: release._id,
-    title: release.title,
+    releaseTitle: release.title,
     coverUrl: release.coverUrl,
     createdAt: release.createdAt,
-    trackCount: release.tracks.length,
-    genres: releaseGenres(release),
     artist: owner.toPublicProfile(),
-    isFriend,
   };
 }
 
-// GET /music/feed — new releases from Friends first, then everyone else
-// ranked by taste (AI-assisted genre affinity, brief: "agentic").
+// GET /music/feed — new tracks from Friends first (newest first), then
+// everyone else: AI-ranked by taste to pick the relevant pool, then
+// resorted so the most-liked tracks surface to the top within it
+// (brief: "like the YouTube algorithm" — relevance picks the pool,
+// engagement decides the order).
 router.get(
   "/feed",
   asyncHandler(async (req, res) => {
@@ -48,18 +50,34 @@ router.get(
       "releases.0": { $exists: true },
     });
 
-    const allEntries = artists
-      .flatMap((owner) => owner.releases.map((release) => ({ release, owner })))
+    const allTracks = artists.flatMap((owner) =>
+      owner.releases.flatMap((release) =>
+        release.tracks.map((track) => ({ track, release, owner }))
+      )
+    );
+
+    const friendTracks = allTracks
+      .filter((t) => friendIds.has(t.owner._id.toString()))
       .sort((a, b) => b.release.createdAt - a.release.createdAt);
 
-    const friendEntries = allEntries.filter((e) => friendIds.has(e.owner._id.toString()));
-    const otherEntries = allEntries.filter((e) => !friendIds.has(e.owner._id.toString()));
+    const otherTracks = allTracks.filter((t) => !friendIds.has(t.owner._id.toString()));
 
-    const rankedOthers = await rankReleasesByTaste(me.genres, otherEntries);
+    const relevanceRanked = await rankTracksByTaste(me.genres, otherTracks);
+    const relevanceRank = new Map(
+      relevanceRanked.map((t, i) => [t.track._id.toString(), i])
+    );
+
+    // Likes decide the final order; relevance rank only breaks ties among
+    // equally-liked tracks (e.g. everything currently at 0 likes).
+    const forYouTracks = [...relevanceRanked].sort((a, b) => {
+      const likeDiff = b.track.likes.length - a.track.likes.length;
+      if (likeDiff !== 0) return likeDiff;
+      return relevanceRank.get(a.track._id.toString()) - relevanceRank.get(b.track._id.toString());
+    });
 
     res.json({
-      friendReleases: friendEntries.map((e) => toFeedItem(e, true)),
-      forYouReleases: rankedOthers.map((e) => toFeedItem(e, false)),
+      friendTracks: friendTracks.map((t) => toTrackItem(t, req.userId)),
+      forYouTracks: forYouTracks.map((t) => toTrackItem(t, req.userId)),
     });
   })
 );

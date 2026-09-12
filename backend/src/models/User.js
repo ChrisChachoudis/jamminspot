@@ -20,6 +20,9 @@ const releaseTrackSchema = new mongoose.Schema(
   {
     title: { type: String, trim: true, required: true },
     audioUrl: { type: String, required: true },
+    // Per-track genres (brief: pick a genre per track) — feeds the Music
+    // feed's taste-based ranking.
+    genres: [{ type: String, enum: GENRES }],
   },
   { _id: true }
 );

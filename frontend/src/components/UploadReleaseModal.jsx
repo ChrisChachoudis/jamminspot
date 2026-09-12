@@ -1,11 +1,18 @@
 import { useRef, useState } from "react";
 import api from "../api/client.js";
+import { GENRES } from "../constants.js";
+
+function toggleGenre(genres, value) {
+  return genres.includes(value) ? genres.filter((g) => g !== value) : [...genres, value];
+}
 
 // Uploads one "release" — a single track, EP or LP — sharing one cover
 // image across however many MP3s the artist picks (SoundCloud-style).
+// Each track gets its own genre tags, used to match it to listeners' taste
+// in the Music feed.
 export default function UploadReleaseModal({ onClose, onUploaded }) {
   const [title, setTitle] = useState("");
-  const [audioFiles, setAudioFiles] = useState([]);
+  const [tracks, setTracks] = useState([]); // [{ file, genres: [] }]
   const [coverFile, setCoverFile] = useState(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -13,17 +20,23 @@ export default function UploadReleaseModal({ onClose, onUploaded }) {
   const trackInputRef = useRef(null);
   const coverInputRef = useRef(null);
 
-  const canSubmit = title.trim() && audioFiles.length > 0 && coverFile && !submitting;
+  const canSubmit = title.trim() && tracks.length > 0 && coverFile && !submitting;
   const coverPreviewUrl = coverFile ? URL.createObjectURL(coverFile) : null;
 
   function addTrackFile(e) {
     const file = e.target.files?.[0];
-    if (file) setAudioFiles((files) => [...files, file]);
+    if (file) setTracks((list) => [...list, { file, genres: [] }]);
     e.target.value = "";
   }
 
-  function removeAudioFile(index) {
-    setAudioFiles((files) => files.filter((_, i) => i !== index));
+  function removeTrack(index) {
+    setTracks((list) => list.filter((_, i) => i !== index));
+  }
+
+  function toggleTrackGenre(index, genre) {
+    setTracks((list) =>
+      list.map((t, i) => (i === index ? { ...t, genres: toggleGenre(t.genres, genre) } : t))
+    );
   }
 
   async function handleSubmit(e) {
@@ -36,7 +49,8 @@ export default function UploadReleaseModal({ onClose, onUploaded }) {
       const formData = new FormData();
       formData.append("title", title.trim());
       formData.append("cover", coverFile);
-      audioFiles.forEach((file) => formData.append("audio", file));
+      tracks.forEach((t) => formData.append("audio", t.file));
+      formData.append("trackGenres", JSON.stringify(tracks.map((t) => t.genres)));
 
       const { data } = await api.post("/users/me/releases", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -85,25 +99,46 @@ export default function UploadReleaseModal({ onClose, onUploaded }) {
           Tracks
         </label>
 
-        {audioFiles.length > 0 && (
-          <ul className="mb-2 space-y-1.5">
-            {audioFiles.map((file, i) => (
-              <li
+        {tracks.length > 0 && (
+          <div className="mb-2 space-y-3">
+            {tracks.map((t, i) => (
+              <div
                 key={i}
-                className="flex items-center gap-2 bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl px-3 py-2 text-sm"
+                className="bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl p-3"
               >
-                <span className="text-base">🎵</span>
-                <span className="flex-1 truncate">{file.name}</span>
-                <button
-                  type="button"
-                  onClick={() => removeAudioFile(i)}
-                  className="w-5 h-5 rounded-full bg-black/30 text-xs leading-5 shrink-0"
-                >
-                  ✕
-                </button>
-              </li>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-base">🎵</span>
+                  <span className="flex-1 truncate text-sm">{t.file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeTrack(i)}
+                    className="w-5 h-5 rounded-full bg-black/30 text-xs leading-5 shrink-0"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {GENRES.map((g) => {
+                    const active = t.genres.includes(g.value);
+                    return (
+                      <button
+                        key={g.value}
+                        type="button"
+                        onClick={() => toggleTrackGenre(i, g.value)}
+                        className={`px-2 py-0.5 rounded-full text-[11px] border transition-colors ${
+                          active
+                            ? "bg-[var(--jm-jam)] border-[var(--jm-jam)] text-white"
+                            : "bg-[var(--jm-surface)] border-[var(--jm-border)] text-[var(--jm-text-dim)]"
+                        }`}
+                      >
+                        {g.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
 
         <button
@@ -111,7 +146,7 @@ export default function UploadReleaseModal({ onClose, onUploaded }) {
           onClick={() => trackInputRef.current?.click()}
           className="w-full border border-dashed border-[var(--jm-border)] rounded-xl py-4 text-center text-sm text-[var(--jm-text-dim)] hover:border-[var(--jm-jam)] hover:text-[var(--jm-jam)] mb-5"
         >
-          {audioFiles.length === 0 ? "＋ Upload a track" : "＋ Upload another track (optional)"}
+          {tracks.length === 0 ? "＋ Upload a track" : "＋ Upload another track (optional)"}
         </button>
         <input
           ref={trackInputRef}

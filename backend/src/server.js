@@ -9,6 +9,7 @@ import discoverRoutes from "./routes/discover.js";
 import jamsRoutes from "./routes/jams.js";
 import messagesRoutes from "./routes/messages.js";
 import aiRoutes from "./routes/ai.js";
+import musicRoutes from "./routes/music.js";
 
 // Last-resort safety net: log instead of crashing the whole dev server if
 // any promise rejection ever slips past asyncHandler/try-catch.
@@ -43,6 +44,7 @@ app.use("/api/discover", discoverRoutes);
 app.use("/api/jams", jamsRoutes);
 app.use("/api/messages", messagesRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/music", musicRoutes);
 
 app.use((err, req, res, next) => {
   if (err.name === "CastError" || err.name === "ValidationError") {

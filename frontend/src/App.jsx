@@ -5,6 +5,7 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Onboarding from "./pages/Onboarding.jsx";
 import Discover from "./pages/Discover.jsx";
+import Music from "./pages/Music.jsx";
 import Jams from "./pages/Jams.jsx";
 import Friends from "./pages/Friends.jsx";
 import Messages from "./pages/Messages.jsx";
@@ -33,6 +34,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Discover />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/music"
+          element={
+            <ProtectedRoute>
+              <Music />
             </ProtectedRoute>
           }
         />

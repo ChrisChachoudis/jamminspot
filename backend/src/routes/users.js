@@ -216,15 +216,37 @@ router.post(
         .json({ error: "At least one MP3 file and a cover image are required" });
     }
 
+    // trackGenres is a JSON-encoded array of genre arrays, one entry per
+    // audio file in the same order (brief: pick a genre per track).
+    let trackGenres = [];
+    if (req.body.trackGenres) {
+      try {
+        trackGenres = JSON.parse(req.body.trackGenres);
+      } catch {
+        return res.status(400).json({ error: "trackGenres must be valid JSON" });
+      }
+      if (!Array.isArray(trackGenres) || trackGenres.length !== audioFiles.length) {
+        return res
+          .status(400)
+          .json({ error: "trackGenres must have one entry per track" });
+      }
+      for (const genres of trackGenres) {
+        if (!Array.isArray(genres) || genres.some((g) => !GENRES.includes(g))) {
+          return res.status(400).json({ error: "trackGenres contains an invalid genre" });
+        }
+      }
+    }
+
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
     user.releases.push({
       title: title.trim(),
       coverUrl: `/uploads/${req.userId}/releases/${coverFile.filename}`,
-      tracks: audioFiles.map((file) => ({
+      tracks: audioFiles.map((file, i) => ({
         title: titleFromFilename(file.originalname),
         audioUrl: `/uploads/${req.userId}/releases/${file.filename}`,
+        genres: trackGenres[i] || [],
       })),
     });
     await user.save();

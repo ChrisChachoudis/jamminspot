@@ -2,7 +2,7 @@ import { Router } from "express";
 import User from "../models/User.js";
 import Conversation from "../models/Conversation.js";
 import { requireAuth } from "../middleware/auth.js";
-import { computeCompatibility } from "../utils/matching.js";
+import { computeCompatibility, distanceKm } from "../utils/matching.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();
@@ -43,6 +43,44 @@ router.get(
         return { profile: candidate.toPublicProfile(), compatibility };
       })
       .sort((a, b) => b.compatibility.score - a.compatibility.score);
+
+    res.json({ results });
+  })
+);
+
+// GET /discover/near-me?latitude=&longitude=&maxDistanceKm=&limit=
+// Facebook-Marketplace-style search: unlike GET /, the center point is
+// whatever place the user picked on the Near Me page, not their own saved
+// location — so this takes latitude/longitude directly instead of reading
+// me.location.
+router.get(
+  "/near-me",
+  asyncHandler(async (req, res) => {
+    const { latitude, longitude, maxDistanceKm, limit = 40 } = req.query;
+    const lat = Number(latitude);
+    const lon = Number(longitude);
+    const radiusKm = Number(maxDistanceKm);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(radiusKm) || radiusKm <= 0) {
+      return res.status(400).json({ error: "latitude, longitude and a positive maxDistanceKm are required" });
+    }
+
+    const candidates = await User.find({
+      _id: { $ne: req.userId },
+      location: {
+        $nearSphere: {
+          $geometry: { type: "Point", coordinates: [lon, lat] },
+          $maxDistance: radiusKm * 1000,
+        },
+      },
+    }).limit(Math.min(Number(limit) || 40, 100));
+
+    const results = candidates
+      .map((candidate) => ({
+        profile: candidate.toPublicProfile(),
+        distanceKm: Math.round(distanceKm([lon, lat], candidate.location.coordinates)),
+      }))
+      .sort((a, b) => a.distanceKm - b.distanceKm);
 
     res.json({ results });
   })

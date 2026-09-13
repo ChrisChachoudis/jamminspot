@@ -10,7 +10,7 @@ function overlapRatio(a = [], b = []) {
   return shared.length / Math.min(a.length, b.length);
 }
 
-function distanceKm([lon1, lat1], [lon2, lat2]) {
+export function distanceKm([lon1, lat1], [lon2, lat2]) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;

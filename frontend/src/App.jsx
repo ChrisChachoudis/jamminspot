@@ -6,6 +6,7 @@ import Register from "./pages/Register.jsx";
 import Onboarding from "./pages/Onboarding.jsx";
 import Discover from "./pages/Discover.jsx";
 import Music from "./pages/Music.jsx";
+import NearMe from "./pages/NearMe.jsx";
 import Jams from "./pages/Jams.jsx";
 import Friends from "./pages/Friends.jsx";
 import Messages from "./pages/Messages.jsx";
@@ -42,6 +43,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Music />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/near-me"
+          element={
+            <ProtectedRoute>
+              <NearMe />
             </ProtectedRoute>
           }
         />

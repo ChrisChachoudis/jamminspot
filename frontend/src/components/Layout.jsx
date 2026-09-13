@@ -27,6 +27,9 @@ export default function Layout() {
           <NavLink to="/music" className={navLinkClass}>
             Music
           </NavLink>
+          <NavLink to="/near-me" className={navLinkClass}>
+            Near Me
+          </NavLink>
           <NavLink to="/jams" className={navLinkClass}>
             Jams
           </NavLink>

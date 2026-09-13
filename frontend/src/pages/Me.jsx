@@ -4,6 +4,14 @@ import api from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { coverPhotoUrl, mediaUrl } from "../utils/media.js";
 import UploadReleaseModal from "../components/UploadReleaseModal.jsx";
+import ChipSelect from "../components/ChipSelect.jsx";
+import PlaceAutocomplete from "../components/PlaceAutocomplete.jsx";
+import { searchCountries, searchCities } from "../api/geocoding.js";
+import { SPECIALTIES, INSTRUMENTS, VOCAL_SKILLS, GOALS, GENRES } from "../constants.js";
+
+function toggle(list, value) {
+  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+}
 
 export default function Me() {
   const { user, refreshUser } = useAuth();
@@ -14,9 +22,36 @@ export default function Me() {
   const [releaseModalOpen, setReleaseModalOpen] = useState(false);
   const [releaseError, setReleaseError] = useState("");
 
+  const [countryInput, setCountryInput] = useState("");
+  const [country, setCountry] = useState(null);
+  const [cityInput, setCityInput] = useState("");
+  const [locationSaving, setLocationSaving] = useState(false);
+  const [locationError, setLocationError] = useState("");
+
+  const [editSpecialties, setEditSpecialties] = useState([]);
+  const [editInstruments, setEditInstruments] = useState([]);
+  const [editVocalSkills, setEditVocalSkills] = useState([]);
+  const [editGoals, setEditGoals] = useState([]);
+  const [editGenres, setEditGenres] = useState([]);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState("");
+
   useEffect(() => {
     if (!user) return;
     api.get(`/users/${user.id}/releases`).then(({ data }) => setReleases(data.releases));
+  }, [user?.id]);
+
+  // Seed the editable-settings form once per logged-in user, not on every
+  // refreshUser() (e.g. after a media upload), so in-progress edits survive.
+  useEffect(() => {
+    if (!user) return;
+    setEditSpecialties(user.specialties || []);
+    setEditInstruments(user.instruments || []);
+    setEditVocalSkills(user.vocalSkills || []);
+    setEditGoals(user.goals || []);
+    setEditGenres(user.genres || []);
+    setCityInput(user.city || "");
   }, [user?.id]);
 
   if (!user) return null;
@@ -76,6 +111,56 @@ export default function Me() {
       setSettingPhotoId(null);
     }
   }
+
+  function selectCountry(option) {
+    setCountry(option);
+    setCountryInput(option.name);
+    setCityInput("");
+  }
+
+  async function selectCity(option) {
+    setCityInput(option.name);
+    setLocationError("");
+    setLocationSaving(true);
+    try {
+      await api.patch("/users/me/location", {
+        longitude: option.longitude,
+        latitude: option.latitude,
+        city: option.name,
+        country: country?.name || option.country,
+      });
+      await refreshUser();
+    } catch (err) {
+      setLocationError(err.response?.data?.error || "Could not save your location");
+    } finally {
+      setLocationSaving(false);
+    }
+  }
+
+  async function saveProfileSettings() {
+    setProfileError("");
+    setProfileSaved(false);
+    setSavingProfile(true);
+    try {
+      await api.patch("/users/me/onboarding", {
+        specialties: editSpecialties,
+        instruments: editInstruments,
+        vocalSkills: editVocalSkills,
+        goals: editGoals,
+        genres: editGenres,
+      });
+      await refreshUser();
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2500);
+    } catch (err) {
+      setProfileError(err.response?.data?.error || "Could not save your changes");
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  const isInstrumentalist = editSpecialties.includes("instrumentalist");
+  const isVocalist = editSpecialties.includes("vocalist");
 
   return (
     <div className="max-w-xl mx-auto p-6">
@@ -255,6 +340,94 @@ export default function Me() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-lg font-bold mb-1">Your info</h2>
+        <p className="text-sm text-[var(--jm-text-dim)] mb-4">
+          Update what you set during onboarding — location, specialties, goals and genres.
+        </p>
+
+        <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1">
+          Country
+        </label>
+        <PlaceAutocomplete
+          value={countryInput}
+          onChange={setCountryInput}
+          onSelect={selectCountry}
+          search={searchCountries}
+          getLabel={(o) => o.name}
+          placeholder="e.g. Greece"
+        />
+
+        <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1 mt-4">
+          City / village
+        </label>
+        <PlaceAutocomplete
+          value={cityInput}
+          onChange={setCityInput}
+          onSelect={selectCity}
+          search={(q) => searchCities(q, country?.countryCode)}
+          getLabel={(o) => `${o.name}${o.state ? ` — ${o.state}` : ""}`}
+          placeholder={country ? "e.g. your city or village" : "Currently: " + (user.city || "not set")}
+          disabled={!country}
+        />
+        {locationSaving && <p className="text-sm text-[var(--jm-text-dim)] mt-2">Saving…</p>}
+        {locationError && <p className="form-error mt-2">{locationError}</p>}
+
+        <h3 className="text-sm font-semibold text-[var(--jm-text-dim)] mt-6 mb-2">What are you?</h3>
+        <ChipSelect
+          options={SPECIALTIES}
+          selected={editSpecialties}
+          onToggle={(v) => setEditSpecialties((s) => toggle(s, v))}
+        />
+
+        {isInstrumentalist && (
+          <div className="mt-4">
+            <h3 className="text-sm font-semibold text-[var(--jm-text-dim)] mb-2">Instruments</h3>
+            <ChipSelect
+              options={INSTRUMENTS}
+              selected={editInstruments}
+              onToggle={(v) => setEditInstruments((s) => toggle(s, v))}
+            />
+          </div>
+        )}
+
+        {isVocalist && (
+          <div className="mt-4">
+            <h3 className="text-sm font-semibold text-[var(--jm-text-dim)] mb-2">Vocal skills</h3>
+            <ChipSelect
+              options={VOCAL_SKILLS}
+              selected={editVocalSkills}
+              onToggle={(v) => setEditVocalSkills((s) => toggle(s, v))}
+            />
+          </div>
+        )}
+
+        <h3 className="text-sm font-semibold text-[var(--jm-text-dim)] mt-6 mb-2">Looking for</h3>
+        <ChipSelect
+          options={GOALS}
+          selected={editGoals}
+          onToggle={(v) => setEditGoals((s) => toggle(s, v))}
+        />
+
+        <h3 className="text-sm font-semibold text-[var(--jm-text-dim)] mt-6 mb-2">Genres</h3>
+        <ChipSelect
+          options={GENRES}
+          selected={editGenres}
+          onToggle={(v) => setEditGenres((s) => toggle(s, v))}
+        />
+
+        {profileError && <p className="form-error mt-4">{profileError}</p>}
+
+        <button
+          type="button"
+          onClick={saveProfileSettings}
+          disabled={savingProfile}
+          className="btn-jam px-8 mt-6 disabled:opacity-60"
+        >
+          {savingProfile ? "Saving…" : profileSaved ? "Saved ✓" : "Save changes"}
+        </button>
       </div>
 
       {releaseModalOpen && (

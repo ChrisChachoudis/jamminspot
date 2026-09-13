@@ -10,6 +10,7 @@ import { searchCountries, searchCities } from "../api/geocoding.js";
 import { SPECIALTIES, INSTRUMENTS, VOCAL_SKILLS, GOALS, GENRES, LISTING_CATEGORIES } from "../constants.js";
 
 const MAX_LISTING_PHOTOS = 5;
+const MAX_LISTING_AUDIO = 3;
 
 function toggle(list, value) {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -47,6 +48,7 @@ export default function Me() {
   const [listingPrice, setListingPrice] = useState("");
   const [listingCategory, setListingCategory] = useState(LISTING_CATEGORIES[0].value);
   const [listingPhotos, setListingPhotos] = useState([]);
+  const [listingAudio, setListingAudio] = useState([]);
   const [listingSubmitting, setListingSubmitting] = useState(false);
   const [listingError, setListingError] = useState("");
 
@@ -188,6 +190,14 @@ export default function Me() {
     setListingPhotos((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function addListingAudio(fileList) {
+    setListingAudio((prev) => [...prev, ...Array.from(fileList)].slice(0, MAX_LISTING_AUDIO));
+  }
+
+  function removeListingAudio(index) {
+    setListingAudio((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function submitListing() {
     setListingError("");
     if (!listingTitle.trim()) return setListingError("Title is required");
@@ -202,6 +212,7 @@ export default function Me() {
       formData.append("price", listingPrice);
       formData.append("category", listingCategory);
       listingPhotos.forEach((file) => formData.append("photos", file));
+      listingAudio.forEach((file) => formData.append("audio", file));
 
       const { data } = await api.post("/listings", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -212,6 +223,7 @@ export default function Me() {
       setListingPrice("");
       setListingCategory(LISTING_CATEGORIES[0].value);
       setListingPhotos([]);
+      setListingAudio([]);
       setSellingOpen(false);
     } catch (err) {
       setListingError(err.response?.data?.error || "Could not post your listing");
@@ -636,6 +648,49 @@ export default function Me() {
               </div>
             )}
 
+            <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1 mt-4">
+              Audio preview (optional, up to {MAX_LISTING_AUDIO} MP3s)
+            </label>
+            <p className="text-xs text-[var(--jm-text-dim)] mb-2">
+              Let a buyer hear it first — a beat for sale, or a demo of how an instrument, mix or
+              production sounds.
+            </p>
+            <label className="block border border-dashed border-[var(--jm-border)] rounded-xl p-6 text-center text-[var(--jm-text-dim)] text-sm cursor-pointer hover:border-[var(--jm-jam)]">
+              {listingAudio.length >= MAX_LISTING_AUDIO ? "Maximum audio added" : "Click to add MP3s"}
+              <input
+                type="file"
+                accept="audio/mpeg,.mp3"
+                multiple
+                disabled={listingAudio.length >= MAX_LISTING_AUDIO}
+                onChange={(e) => {
+                  if (e.target.files?.length) addListingAudio(e.target.files);
+                  e.target.value = "";
+                }}
+                className="hidden"
+              />
+            </label>
+
+            {listingAudio.length > 0 && (
+              <div className="space-y-2 mt-3">
+                {listingAudio.map((file, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl p-2"
+                  >
+                    <span className="text-base shrink-0">🎵</span>
+                    <span className="flex-1 truncate text-sm">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeListingAudio(i)}
+                      className="w-5 h-5 rounded-full bg-black/30 text-xs leading-5 shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {listingError && <p className="form-error mt-3">{listingError}</p>}
 
             <div className="flex gap-3 mt-6">
@@ -664,27 +719,42 @@ export default function Me() {
             {listings.map((listing) => (
               <div
                 key={listing.id}
-                className="flex items-center gap-3 bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl p-3"
+                className="bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl p-3"
               >
-                <img
-                  src={mediaUrl({ url: listing.photos[0] })}
-                  alt=""
-                  className="w-12 h-12 rounded-lg object-cover shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{listing.title}</p>
-                  <p className="text-xs text-[var(--jm-text-dim)]">
-                    €{listing.price} ·{" "}
-                    {LISTING_CATEGORIES.find((c) => c.value === listing.category)?.label}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <img
+                    src={mediaUrl({ url: listing.photos[0] })}
+                    alt=""
+                    className="w-12 h-12 rounded-lg object-cover shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{listing.title}</p>
+                    <p className="text-xs text-[var(--jm-text-dim)]">
+                      €{listing.price} ·{" "}
+                      {LISTING_CATEGORIES.find((c) => c.value === listing.category)?.label}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeListing(listing.id)}
+                    className="w-7 h-7 rounded-full bg-[var(--jm-surface)] text-xs shrink-0"
+                  >
+                    ✕
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeListing(listing.id)}
-                  className="w-7 h-7 rounded-full bg-[var(--jm-surface)] text-xs shrink-0"
-                >
-                  ✕
-                </button>
+
+                {listing.audio?.length > 0 && (
+                  <div className="space-y-1.5 mt-2">
+                    {listing.audio.map((a, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-xs text-[var(--jm-text-dim)] w-20 truncate shrink-0">
+                          {a.title}
+                        </span>
+                        <audio controls src={mediaUrl({ url: a.url })} className="flex-1 h-8" />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

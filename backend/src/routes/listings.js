@@ -2,7 +2,8 @@ import { Router } from "express";
 import Listing, { LISTING_CATEGORIES } from "../models/Listing.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadListingPhotos } from "../middleware/upload.js";
+import { uploadListingMedia } from "../middleware/upload.js";
+import { titleFromFilename } from "./users.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -15,6 +16,7 @@ function serializeListing(listing) {
     price: listing.price,
     category: listing.category,
     photos: listing.photos.map((p) => p.url),
+    audio: listing.audio.map((a) => ({ url: a.url, title: a.title })),
     createdAt: listing.createdAt,
   };
 }
@@ -29,10 +31,11 @@ router.get(
   })
 );
 
-// POST /listings — multipart: title, description, price, category, photos[] (1-5 images).
+// POST /listings — multipart: title, description, price, category,
+// photos[] (1-5 images, required), audio[] (0-3 MP3s, optional preview).
 router.post(
   "/",
-  uploadListingPhotos,
+  uploadListingMedia,
   asyncHandler(async (req, res) => {
     const { title, description, price, category } = req.body;
 
@@ -46,7 +49,10 @@ router.post(
     if (!LISTING_CATEGORIES.includes(category)) {
       return res.status(400).json({ error: `category must be one of: ${LISTING_CATEGORIES.join(", ")}` });
     }
-    if (!req.files?.length) {
+
+    const photoFiles = req.files?.photos || [];
+    const audioFiles = req.files?.audio || [];
+    if (!photoFiles.length) {
       return res.status(400).json({ error: "At least one photo is required" });
     }
 
@@ -56,7 +62,11 @@ router.post(
       description: description?.trim() || "",
       price: priceNum,
       category,
-      photos: req.files.map((f) => ({ url: `/uploads/${req.userId}/listings/${f.filename}` })),
+      photos: photoFiles.map((f) => ({ url: `/uploads/${req.userId}/listings/${f.filename}` })),
+      audio: audioFiles.map((f) => ({
+        url: `/uploads/${req.userId}/listings/${f.filename}`,
+        title: titleFromFilename(f.originalname),
+      })),
     });
 
     res.status(201).json({ listing: serializeListing(listing) });

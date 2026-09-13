@@ -205,7 +205,7 @@ router.patch(
   })
 );
 
-function titleFromFilename(originalname) {
+export function titleFromFilename(originalname) {
   // Multer/busboy decode multipart filenames as latin1 by default, which
   // mangles any non-ASCII (e.g. Greek) filename a browser sent as UTF-8 —
   // re-decode to undo that.

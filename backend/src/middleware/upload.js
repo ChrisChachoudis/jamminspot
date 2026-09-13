@@ -96,14 +96,24 @@ const listingStorage = multer.diskStorage({
 });
 
 export const MAX_LISTING_PHOTOS = 5;
+export const MAX_LISTING_AUDIO = 3;
 
-export const uploadListingPhotos = multer({
+// Optional preview audio alongside a listing's photos — e.g. a beat for
+// sale, or a demo of how an instrument/mix sounds — so a buyer can hear it
+// before deciding. MP3 only, same as release tracks.
+export const uploadListingMedia = multer({
   storage: listingStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB per file (audio needs more headroom than photos)
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
+    if (file.fieldname === "photos" && file.mimetype.startsWith("image/")) {
       return cb(null, true);
     }
-    cb(rejectedFileType("Listing photos must be images"));
+    if (file.fieldname === "audio" && file.mimetype === "audio/mpeg") {
+      return cb(null, true);
+    }
+    cb(rejectedFileType("Photos must be images and audio must be MP3 files"));
   },
-}).array("photos", MAX_LISTING_PHOTOS);
+}).fields([
+  { name: "photos", maxCount: MAX_LISTING_PHOTOS },
+  { name: "audio", maxCount: MAX_LISTING_AUDIO },
+]);

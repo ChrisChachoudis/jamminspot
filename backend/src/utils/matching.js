@@ -3,6 +3,14 @@
 // can run over every Discover candidate. An AI-driven score can be added
 // later as an alternative "explain" layer on top of this.
 
+// Most recent action `swipes` (an interaction array on a User doc) records
+// against `targetId`, or null if there's no such swipe at all.
+function latestSwipeAction(swipes, targetId) {
+  const onTarget = (swipes || []).filter((s) => s.user.toString() === targetId);
+  if (!onTarget.length) return null;
+  return onTarget.reduce((latest, s) => (s.createdAt > latest.createdAt ? s : latest)).action;
+}
+
 function overlapRatio(a = [], b = []) {
   if (!a.length || !b.length) return 0;
   const setB = new Set(b);
@@ -69,24 +77,25 @@ export function computeCompatibility(userA, userB) {
     distanceScore * WEIGHTS.distance;
 
   // Viewer-perspective interaction history (userA = viewer, userB =
-  // candidate): people aren't excluded from Discover/Near Me just for
-  // having a pending or declined Jam request, they're ranked down instead
-  // so fresher, mutual-looking matches surface first.
-  const iJammedThem = (userA.swipes || []).some(
-    (s) => s.user.toString() === userB._id.toString() && s.action === "jam"
-  );
-  if (iJammedThem) {
-    const theyDeclinedMe = (userB.swipes || []).some(
-      (s) => s.user.toString() === userA._id.toString() && s.action === "skip"
-    );
-    const theyRespondedAtAll = (userB.swipes || []).some(
-      (s) => s.user.toString() === userA._id.toString()
-    );
-    if (theyDeclinedMe) {
-      score *= 0.1; // declined — still visible, but pushed to the bottom
-    } else if (!theyRespondedAtAll) {
+  // candidate): people aren't excluded from Discover/Near Me just for a
+  // skip, a pending Jam request, or a declined one — they're ranked down
+  // instead so fresher, mutual-looking matches surface first. Only each
+  // side's LATEST action counts, so re-encountering someone after a swipe
+  // (once re-ranked on the next fetch) reflects the current state, not
+  // some earlier one.
+  const myLatestOnThem = latestSwipeAction(userA.swipes, userB._id.toString());
+  const theirLatestOnMe = latestSwipeAction(userB.swipes, userA._id.toString());
+
+  if (myLatestOnThem === "skip") {
+    score *= 0.1; // you already passed on them — still visible, just last
+  } else if (myLatestOnThem === "jam") {
+    if (theirLatestOnMe === "skip") {
+      score *= 0.1; // they declined your Jam request
+    } else if (!theirLatestOnMe) {
       score *= 0.5; // pending — deprioritized until they respond
     }
+    // theirLatestOnMe === "jam"/"like" would make you Friends already,
+    // which are excluded from these results before compatibility runs.
   }
 
   return {

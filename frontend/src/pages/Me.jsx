@@ -42,6 +42,14 @@ export default function Me() {
   const [editingInfo, setEditingInfo] = useState(false);
 
   const [listings, setListings] = useState([]);
+  const [productsOpen, setProductsOpen] = useState(false);
+  const [editingListingId, setEditingListingId] = useState(null);
+  const [editListingTitle, setEditListingTitle] = useState("");
+  const [editListingDescription, setEditListingDescription] = useState("");
+  const [editListingPrice, setEditListingPrice] = useState("");
+  const [editListingCategory, setEditListingCategory] = useState("");
+  const [editListingSaving, setEditListingSaving] = useState(false);
+  const [editListingError, setEditListingError] = useState("");
   const [sellingOpen, setSellingOpen] = useState(false);
   const [listingTitle, setListingTitle] = useState("");
   const [listingDescription, setListingDescription] = useState("");
@@ -241,6 +249,43 @@ export default function Me() {
     }
   }
 
+  function startEditListing(listing) {
+    setEditingListingId(listing.id);
+    setEditListingTitle(listing.title);
+    setEditListingDescription(listing.description || "");
+    setEditListingPrice(String(listing.price));
+    setEditListingCategory(listing.category);
+    setEditListingError("");
+  }
+
+  function cancelEditListing() {
+    setEditingListingId(null);
+    setEditListingError("");
+  }
+
+  async function saveEditListing(listingId) {
+    setEditListingError("");
+    if (!editListingTitle.trim()) return setEditListingError("Title is required");
+    if (!editListingPrice || Number(editListingPrice) < 0) {
+      return setEditListingError("Enter a valid price");
+    }
+    setEditListingSaving(true);
+    try {
+      const { data } = await api.patch(`/listings/${listingId}`, {
+        title: editListingTitle,
+        description: editListingDescription,
+        price: editListingPrice,
+        category: editListingCategory,
+      });
+      setListings((prev) => prev.map((l) => (l.id === listingId ? data.listing : l)));
+      setEditingListingId(null);
+    } catch (err) {
+      setEditListingError(err.response?.data?.error || "Could not save changes");
+    } finally {
+      setEditListingSaving(false);
+    }
+  }
+
   return (
     <div className="max-w-xl mx-auto p-6">
       <div className="bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl overflow-hidden">
@@ -428,6 +473,172 @@ export default function Me() {
               </div>
             ))}
           </div>
+        )}
+      </div>
+
+      <div className="mt-8 bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl p-5">
+        <h2 className="text-lg font-bold mb-1">Products</h2>
+
+        {!productsOpen ? (
+          <>
+            <p className="text-sm text-[var(--jm-text-dim)] mb-4">
+              What you have for sale — view, edit or remove any listing.
+            </p>
+            <button
+              type="button"
+              onClick={() => setProductsOpen(true)}
+              className="btn-jam px-6 !mt-0"
+            >
+              View
+            </button>
+          </>
+        ) : (
+          <>
+            {!listings.length ? (
+              <p className="text-sm text-[var(--jm-text-dim)] mt-4">
+                Nothing for sale yet — post a listing below.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-2">
+                {listings.map((listing) =>
+                  editingListingId === listing.id ? (
+                    <div
+                      key={listing.id}
+                      className="bg-[var(--jm-surface-2)] border border-[var(--jm-jam)] rounded-xl p-3"
+                    >
+                      <label className="text-xs font-semibold text-[var(--jm-text-dim)] block mb-1">
+                        Title
+                      </label>
+                      <input
+                        value={editListingTitle}
+                        onChange={(e) => setEditListingTitle(e.target.value)}
+                        className="w-full bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--jm-jam)]"
+                      />
+
+                      <label className="text-xs font-semibold text-[var(--jm-text-dim)] block mb-1 mt-3">
+                        Description
+                      </label>
+                      <textarea
+                        value={editListingDescription}
+                        onChange={(e) => setEditListingDescription(e.target.value)}
+                        rows={2}
+                        className="w-full bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-lg p-2 text-sm outline-none focus:border-[var(--jm-jam)]"
+                      />
+
+                      <div className="grid grid-cols-2 gap-2 mt-3">
+                        <div>
+                          <label className="text-xs font-semibold text-[var(--jm-text-dim)] block mb-1">
+                            Price (€)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={editListingPrice}
+                            onChange={(e) => setEditListingPrice(e.target.value)}
+                            className="w-full bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--jm-jam)]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-[var(--jm-text-dim)] block mb-1">
+                            Category
+                          </label>
+                          <select
+                            value={editListingCategory}
+                            onChange={(e) => setEditListingCategory(e.target.value)}
+                            className="w-full bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--jm-jam)]"
+                          >
+                            {LISTING_CATEGORIES.map((c) => (
+                              <option key={c.value} value={c.value}>
+                                {c.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {editListingError && (
+                        <p className="form-error mt-2">{editListingError}</p>
+                      )}
+
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() => saveEditListing(listing.id)}
+                          disabled={editListingSaving}
+                          className="btn-jam flex-1 !mt-0 py-2 text-sm disabled:opacity-60"
+                        >
+                          {editListingSaving ? "Saving…" : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEditListing}
+                          className="px-4 rounded-full text-sm font-semibold bg-[var(--jm-surface)] text-[var(--jm-text-dim)] hover:text-[var(--jm-text)]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      key={listing.id}
+                      className="bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={mediaUrl({ url: listing.photos[0] })}
+                          alt=""
+                          className="w-12 h-12 rounded-lg object-cover shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{listing.title}</p>
+                          <p className="text-xs text-[var(--jm-text-dim)]">
+                            €{listing.price} ·{" "}
+                            {LISTING_CATEGORIES.find((c) => c.value === listing.category)?.label}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => startEditListing(listing)}
+                          className="text-xs font-semibold text-[var(--jm-jam)] shrink-0"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeListing(listing.id)}
+                          className="w-7 h-7 rounded-full bg-[var(--jm-surface)] text-xs shrink-0"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {listing.audio?.length > 0 && (
+                        <div className="space-y-1.5 mt-2">
+                          {listing.audio.map((a, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="text-xs text-[var(--jm-text-dim)] w-20 truncate shrink-0">
+                                {a.title}
+                              </span>
+                              <audio controls src={mediaUrl({ url: a.url })} className="flex-1 h-8" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setProductsOpen(false)}
+              className="mt-4 px-6 rounded-full text-sm font-semibold bg-[var(--jm-surface-2)] text-[var(--jm-text-dim)] hover:text-[var(--jm-text)]"
+            >
+              Done
+            </button>
+          </>
         )}
       </div>
 
@@ -721,53 +932,6 @@ export default function Me() {
               </button>
             </div>
           </>
-        )}
-
-        {listings.length > 0 && (
-          <div className="mt-6 space-y-2">
-            <h3 className="text-sm font-semibold text-[var(--jm-text-dim)] mb-2">Your listings</h3>
-            {listings.map((listing) => (
-              <div
-                key={listing.id}
-                className="bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl p-3"
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={mediaUrl({ url: listing.photos[0] })}
-                    alt=""
-                    className="w-12 h-12 rounded-lg object-cover shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{listing.title}</p>
-                    <p className="text-xs text-[var(--jm-text-dim)]">
-                      €{listing.price} ·{" "}
-                      {LISTING_CATEGORIES.find((c) => c.value === listing.category)?.label}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeListing(listing.id)}
-                    className="w-7 h-7 rounded-full bg-[var(--jm-surface)] text-xs shrink-0"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {listing.audio?.length > 0 && (
-                  <div className="space-y-1.5 mt-2">
-                    {listing.audio.map((a, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="text-xs text-[var(--jm-text-dim)] w-20 truncate shrink-0">
-                          {a.title}
-                        </span>
-                        <audio controls src={mediaUrl({ url: a.url })} className="flex-1 h-8" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
         )}
       </div>
 

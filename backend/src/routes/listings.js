@@ -160,6 +160,40 @@ router.post(
   })
 );
 
+// PATCH /listings/:id — edit title/description/price/category of your own
+// listing (photos/audio stay as originally uploaded; only the seller can edit).
+router.patch(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const listing = await Listing.findOne({ _id: req.params.id, seller: req.userId });
+    if (!listing) return res.status(404).json({ error: "Listing not found" });
+
+    const { title, description, price, category } = req.body;
+
+    if (title !== undefined) {
+      if (!title.trim()) return res.status(400).json({ error: "title is required" });
+      listing.title = title.trim();
+    }
+    if (description !== undefined) listing.description = description.trim();
+    if (price !== undefined) {
+      const priceNum = Number(price);
+      if (!Number.isFinite(priceNum) || priceNum < 0) {
+        return res.status(400).json({ error: "price must be a non-negative number" });
+      }
+      listing.price = priceNum;
+    }
+    if (category !== undefined) {
+      if (!LISTING_CATEGORIES.includes(category)) {
+        return res.status(400).json({ error: `category must be one of: ${LISTING_CATEGORIES.join(", ")}` });
+      }
+      listing.category = category;
+    }
+
+    await listing.save();
+    res.json({ listing: serializeListing(listing) });
+  })
+);
+
 // DELETE /listings/:id — only the seller can remove their own listing.
 router.delete(
   "/:id",

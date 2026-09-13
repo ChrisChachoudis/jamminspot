@@ -4,14 +4,12 @@ import TrackRow from "../components/TrackRow.jsx";
 
 const TABS = [
   { value: "forYou", label: "✨ Picked for you" },
-  { value: "thisWeek", label: "🗓️ This week" },
   { value: "friends", label: "Friends" },
 ];
 
 export default function Music() {
   const [friendTracks, setFriendTracks] = useState([]);
   const [forYouTracks, setForYouTracks] = useState([]);
-  const [newThisWeek, setNewThisWeek] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("forYou");
 
@@ -19,7 +17,6 @@ export default function Music() {
     api.get("/music/feed").then(({ data }) => {
       setFriendTracks(data.friendTracks);
       setForYouTracks(data.forYouTracks);
-      setNewThisWeek(data.newThisWeek);
       setLoading(false);
     });
   }, []);
@@ -28,7 +25,7 @@ export default function Music() {
     return <div className="p-10 text-center text-[var(--jm-text-dim)]">Loading music…</div>;
   }
 
-  if (!friendTracks.length && !forYouTracks.length && !newThisWeek.length) {
+  if (!friendTracks.length && !forYouTracks.length) {
     return (
       <div className="p-10 text-center text-[var(--jm-text-dim)]">
         No releases yet — check back once musicians start uploading music.
@@ -58,10 +55,9 @@ export default function Music() {
     );
   }
 
-  const tracksByTab = { forYou: forYouTracks, thisWeek: newThisWeek, friends: friendTracks };
+  const tracksByTab = { forYou: forYouTracks, friends: friendTracks };
   const emptyMessage = {
     forYou: "No picks yet — check back once musicians start uploading music.",
-    thisWeek: "No new releases this week yet.",
     friends: "No new tracks from your Friends yet.",
   };
   const activeTracks = tracksByTab[tab];

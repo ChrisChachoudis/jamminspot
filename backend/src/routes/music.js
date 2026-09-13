@@ -9,8 +9,6 @@ import { rankForYou } from "../utils/musicRanking.js";
 const router = Router();
 router.use(requireAuth);
 
-const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
 function reasonLabel(reason) {
   if (!reason) return null;
   if (reason === "friend") return "Because a friend of yours liked this";
@@ -39,11 +37,10 @@ function toTrackItem({ track, release, owner, reason }, viewerId) {
 
 // GET /music/feed
 // - friendTracks: new from Friends, newest first
-// - newThisWeek: everyone's uploads from the last 7 days, newest first
-//   (Spotify "Release Radar" style — a reason to check back regularly)
 // - forYouTracks: everyone else, blending AI genre relevance with
 //   collaborative filtering, friend social proof, and recency-weighted
-//   popularity — see utils/musicRanking.js for the full algorithm.
+//   popularity (a Release Radar-style freshness boost lives inside that
+//   score rather than as its own section) — see utils/musicRanking.js.
 router.get(
   "/feed",
   asyncHandler(async (req, res) => {
@@ -75,12 +72,6 @@ router.get(
       .filter((t) => friendIds.has(t.owner._id.toString()))
       .sort((a, b) => b.release.createdAt - a.release.createdAt);
 
-    const now = Date.now();
-    const newThisWeek = allTracks
-      .filter((t) => now - new Date(t.release.createdAt).getTime() <= ONE_WEEK_MS)
-      .sort((a, b) => b.release.createdAt - a.release.createdAt)
-      .slice(0, 10);
-
     const otherTracks = allTracks.filter((t) => !friendIds.has(t.owner._id.toString()));
 
     const relevanceRanked = await rankTracksByTaste(me.genres, otherTracks, req.userId);
@@ -96,7 +87,6 @@ router.get(
 
     res.json({
       friendTracks: friendTracks.map((t) => toTrackItem(t, req.userId)),
-      newThisWeek: newThisWeek.map((t) => toTrackItem(t, req.userId)),
       forYouTracks: forYouTracks.map((t) => toTrackItem(t, req.userId)),
     });
   })

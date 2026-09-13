@@ -22,6 +22,23 @@ function serializeListing(listing) {
   };
 }
 
+// Same as serializeListing, plus the populated seller — for anywhere a
+// buyer (not just the owner) sees a listing: the Market grid and the
+// single-listing detail page.
+function serializeListingWithSeller(listing, extra = {}) {
+  return {
+    ...serializeListing(listing),
+    ...extra,
+    seller: {
+      id: listing.seller._id,
+      name: listing.seller.name,
+      city: listing.seller.location?.city ?? null,
+      media: listing.seller.media,
+      profilePhotoId: listing.seller.profilePhotoId,
+    },
+  };
+}
+
 // GET /listings — browse the market (everyone else's listings).
 // Filters: category, minPrice, maxPrice, and an optional area filter
 // (latitude/longitude/maxDistanceKm) — same city+radius pattern as Near Me,
@@ -66,24 +83,9 @@ router.get(
     let results = listings.map((listing) => {
       const sellerCoords = listing.seller.location?.coordinates;
       const distance = hasAreaFilter && sellerCoords ? distanceKm([lon, lat], sellerCoords) : null;
-      return {
-        id: listing._id,
-        title: listing.title,
-        description: listing.description,
-        price: listing.price,
-        category: listing.category,
-        photos: listing.photos.map((p) => p.url),
-        audio: listing.audio.map((a) => ({ url: a.url, title: a.title })),
-        createdAt: listing.createdAt,
+      return serializeListingWithSeller(listing, {
         distanceKm: distance === null ? null : Math.round(distance),
-        seller: {
-          id: listing.seller._id,
-          name: listing.seller.name,
-          city: listing.seller.location?.city ?? null,
-          media: listing.seller.media,
-          profilePhotoId: listing.seller.profilePhotoId,
-        },
-      };
+      });
     });
 
     if (hasAreaFilter) {
@@ -115,6 +117,23 @@ router.get(
   asyncHandler(async (req, res) => {
     const listings = await Listing.find({ seller: req.params.id }).sort({ createdAt: -1 });
     res.json({ listings: listings.map(serializeListing) });
+  })
+);
+
+// GET /listings/:id — a single listing's full detail (photos, description,
+// audio, seller), for the Market's product detail page. Must stay after
+// the literal routes above (/, /mine, /user/:id) so it doesn't swallow them.
+router.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const listing = await Listing.findById(req.params.id).populate(
+      "seller",
+      "name media profilePhotoId location"
+    );
+    if (!listing || !listing.seller) {
+      return res.status(404).json({ error: "Listing not found" });
+    }
+    res.json({ listing: serializeListingWithSeller(listing) });
   })
 );
 

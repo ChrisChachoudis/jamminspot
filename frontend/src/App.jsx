@@ -15,6 +15,7 @@ import Me from "./pages/Me.jsx";
 import Profile from "./pages/Profile.jsx";
 import Discography from "./pages/Discography.jsx";
 import Seller from "./pages/Seller.jsx";
+import Listing from "./pages/Listing.jsx";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -117,6 +118,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Seller />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/listing/:id"
+          element={
+            <ProtectedRoute>
+              <Listing />
             </ProtectedRoute>
           }
         />

@@ -219,7 +219,7 @@ export default function Market() {
               <button
                 type="button"
                 key={listing.id}
-                onClick={() => navigate(`/profile/${listing.seller.id}`)}
+                onClick={() => navigate(`/listing/${listing.id}`)}
                 className="text-left bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-lg overflow-hidden hover:border-[var(--jm-jam)] transition-colors"
               >
                 <div className="w-full aspect-square bg-[var(--jm-surface-2)]">

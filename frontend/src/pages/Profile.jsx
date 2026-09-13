@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client.js";
+import { useAuth } from "../context/AuthContext.jsx";
 import { coverPhotoUrl, mediaUrl } from "../utils/media.js";
 
 export default function Profile() {
@@ -8,7 +9,9 @@ export default function Profile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [jamStatus, setJamStatus] = useState(null); // null | "sending" | "sent" | "matched" | "error"
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     setLoading(true);
@@ -26,6 +29,21 @@ export default function Profile() {
 
   const photo = coverPhotoUrl(profile.media, profile.profilePhotoId);
   const otherMedia = (profile.media || []).filter((m) => mediaUrl(m) !== photo);
+  const isSelf = user?.id === profile.id;
+
+  async function addForJam() {
+    setJamStatus("sending");
+    try {
+      const { data } = await api.post("/discover/swipe", {
+        targetUserId: profile.id,
+        action: "jam",
+      });
+      setJamStatus(data.jamCreated ? "matched" : "sent");
+    } catch (err) {
+      setJamStatus("error");
+      setError(err.response?.data?.error || "Could not send a Jam request");
+    }
+  }
 
   return (
     <div className="max-w-xl mx-auto p-6">
@@ -151,13 +169,36 @@ export default function Profile() {
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => navigate(`/messages?to=${profile.id}`)}
-            className="btn-jam w-full mt-6"
-          >
-            Message
-          </button>
+          {!isSelf && (
+            <>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={addForJam}
+                  disabled={jamStatus === "sending" || jamStatus === "sent" || jamStatus === "matched"}
+                  className="btn-jam flex-1 !mt-0 disabled:opacity-60"
+                >
+                  {jamStatus === "matched"
+                    ? "It's a Jam! 🎸"
+                    : jamStatus === "sent"
+                    ? "Jam request sent ✓"
+                    : "Add for Jam"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/messages?to=${profile.id}`)}
+                  className="btn-message flex-1 !mt-0 py-3"
+                >
+                  Message
+                </button>
+              </div>
+              {jamStatus === "matched" && (
+                <p className="text-xs text-[var(--jm-jam)] mt-2">
+                  You're both in — check Friends to start chatting.
+                </p>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

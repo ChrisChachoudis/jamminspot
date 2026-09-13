@@ -30,7 +30,7 @@ export default function TrackRow({
         <p className="text-sm font-semibold truncate">{title}</p>
         {showArtist && (
           <Link
-            to={`/discography/${artistId}`}
+            to={`/profile/${artistId}`}
             className="flex items-center gap-1.5 mt-0.5 hover:text-[var(--jm-jam)]"
           >
             <Avatar media={artistMedia} profilePhotoId={artistProfilePhotoId} name={artistName} size={16} />

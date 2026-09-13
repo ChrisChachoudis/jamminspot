@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client.js";
-import Avatar from "../components/Avatar.jsx";
 import PlaceAutocomplete from "../components/PlaceAutocomplete.jsx";
 import { searchCountries, searchCities } from "../api/geocoding.js";
 import { LISTING_CATEGORIES } from "../constants.js";
 import { mediaUrl } from "../utils/media.js";
 
 const RADIUS_OPTIONS_KM = [5, 10, 25, 50, 100, 250, 500];
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 8;
 
 export default function Market() {
   const [listings, setListings] = useState([]);
@@ -215,62 +214,35 @@ export default function Market() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {pageListings.map((listing) => (
-              <div
+              <button
+                type="button"
                 key={listing.id}
-                className="bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-lg overflow-hidden"
+                onClick={() => navigate(`/profile/${listing.seller.id}`)}
+                className="text-left bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-lg overflow-hidden hover:border-[var(--jm-jam)] transition-colors"
               >
-                <button
-                  type="button"
-                  onClick={() => navigate(`/profile/${listing.seller.id}`)}
-                  className="w-full h-20 bg-[var(--jm-surface-2)] block"
-                >
+                <div className="w-full aspect-square bg-[var(--jm-surface-2)]">
                   <img
                     src={mediaUrl({ url: listing.photos[0] })}
                     alt={listing.title}
                     className="w-full h-full object-cover"
                   />
-                </button>
+                </div>
 
                 <div className="p-2">
-                  <div className="flex items-start justify-between gap-1">
-                    <p className="text-xs font-semibold truncate">{listing.title}</p>
-                    <span className="text-xs font-semibold text-[var(--jm-jam)] shrink-0">
-                      €{listing.price}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-[var(--jm-text-dim)] truncate">
-                    {LISTING_CATEGORIES.find((c) => c.value === listing.category)?.label}
+                  <p className="text-sm font-bold text-[var(--jm-jam)] leading-tight">
+                    €{listing.price}
+                  </p>
+                  <p className="text-xs font-medium truncate leading-tight mt-0.5">
+                    {listing.title}
+                  </p>
+                  <p className="text-[10px] text-[var(--jm-text-dim)] truncate mt-0.5">
+                    {listing.seller.city || listing.seller.name}
                     {listing.distanceKm !== null && ` · ${listing.distanceKm} km`}
                   </p>
-
-                  {listing.audio?.length > 0 && (
-                    <audio
-                      controls
-                      src={mediaUrl({ url: listing.audio[0].url })}
-                      className="w-full h-7 mt-1.5"
-                    />
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/profile/${listing.seller.id}`)}
-                    className="flex items-center gap-1.5 mt-1.5 hover:text-[var(--jm-jam)]"
-                  >
-                    <Avatar
-                      media={listing.seller.media}
-                      profilePhotoId={listing.seller.profilePhotoId}
-                      name={listing.seller.name}
-                      size={16}
-                    />
-                    <span className="text-[10px] text-[var(--jm-text-dim)] truncate">
-                      {listing.seller.name}
-                      {listing.seller.city ? ` · ${listing.seller.city}` : ""}
-                    </span>
-                  </button>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
 

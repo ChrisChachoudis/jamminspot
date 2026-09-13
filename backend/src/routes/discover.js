@@ -68,11 +68,20 @@ router.get(
       return res.status(400).json({ error: "latitude, longitude and a positive maxDistanceKm are required" });
     }
 
-    const seenIds = new Set(me.swipes.map((s) => s.user.toString()));
-    seenIds.add(me._id.toString());
+    // Unlike Discover (a one-pass swipe deck), Near Me is a location
+    // directory — people you've skipped or already Jammed should still
+    // show up on a fresh search. Only actual Friends (mutual Jam) are
+    // excluded, same as they're excluded from Discover once matched.
+    const jamConversations = await Conversation.find({ participants: me._id, isJam: true });
+    const excludeIds = new Set(
+      jamConversations
+        .flatMap((c) => c.participants.map((p) => p.toString()))
+        .filter((id) => id !== req.userId)
+    );
+    excludeIds.add(me._id.toString());
 
     const candidates = await User.find({
-      _id: { $nin: Array.from(seenIds) },
+      _id: { $nin: Array.from(excludeIds) },
       location: {
         $nearSphere: {
           $geometry: { type: "Point", coordinates: [lon, lat] },

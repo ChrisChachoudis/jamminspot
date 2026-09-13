@@ -23,6 +23,18 @@ function sortByOverlap(listenerGenres, candidates) {
   });
 }
 
+// Cap how long we'll wait on the AI call — the Music feed should never
+// feel "stuck" just because a model response is slow. Past this, fall
+// back to the deterministic sort like any other AI failure.
+const AI_TIMEOUT_MS = 4000;
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("AI ranking timed out")), ms)),
+  ]);
+}
+
 // Ranks non-friend tracks by how well they match the listener's taste.
 // `candidates` is [{ track, release, owner }]. Returns the same shape,
 // reordered by relevance (most to least).
@@ -40,7 +52,7 @@ export async function rankTracksByTaste(listenerGenres, candidates) {
       })),
     });
 
-    const text = await generateText({ system: SYSTEM, prompt });
+    const text = await withTimeout(generateText({ system: SYSTEM, prompt }), AI_TIMEOUT_MS);
     const match = text.match(/\[[\s\S]*\]/);
     const orderedIds = JSON.parse(match ? match[0] : text);
 

@@ -195,7 +195,11 @@ router.patch(
 );
 
 function titleFromFilename(originalname) {
-  return path.basename(originalname, path.extname(originalname));
+  // Multer/busboy decode multipart filenames as latin1 by default, which
+  // mangles any non-ASCII (e.g. Greek) filename a browser sent as UTF-8 —
+  // re-decode to undo that.
+  const fixed = Buffer.from(originalname, "latin1").toString("utf8");
+  return path.basename(fixed, path.extname(fixed));
 }
 
 // POST /users/me/releases — multipart upload: "cover" (single JPG) + "audio"

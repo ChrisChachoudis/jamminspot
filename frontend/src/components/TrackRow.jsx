@@ -20,6 +20,7 @@ export default function TrackRow({
   artistProfilePhotoId,
   releaseId,
   releaseTitle,
+  reason,
   showArtist = false,
 }) {
   return (
@@ -40,6 +41,7 @@ export default function TrackRow({
           </Link>
         )}
         <audio controls src={mediaUrl({ url: audioUrl })} className="w-full mt-1.5" />
+        {reason && <p className="text-[11px] text-[var(--jm-jam)] mt-1">{reason}</p>}
       </div>
       <div className="flex items-center">
         <LikeButton

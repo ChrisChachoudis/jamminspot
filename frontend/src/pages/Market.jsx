@@ -194,6 +194,12 @@ export default function Market() {
         </div>
       </div>
 
+      {!loading && listings.length > 0 && !category && !minPrice && !maxPrice && !city && (
+        <p className="text-xs text-[var(--jm-text-dim)] mb-3">
+          Showing the 10 most recent listings — apply a filter to see more.
+        </p>
+      )}
+
       {loading ? (
         <div className="p-10 text-center text-[var(--jm-text-dim)]">Loading listings…</div>
       ) : listings.length === 0 ? (

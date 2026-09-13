@@ -45,10 +45,15 @@ router.get(
       if (maxPrice) query.price.$lte = Number(maxPrice);
     }
 
+    // With no filter picked yet, show a quick "what's new" glance (latest
+    // 10) instead of the whole market; once any filter is applied, the
+    // results are already narrowed down so the full match set is more useful.
+    const hasAnyFilter = Boolean(category || minPrice || maxPrice || latitude || longitude || maxDistanceKm);
+
     let listings = await Listing.find(query)
       .populate("seller", "name media profilePhotoId location")
       .sort({ createdAt: -1 })
-      .limit(200);
+      .limit(hasAnyFilter ? 200 : 10);
 
     // Drop listings whose seller account no longer exists.
     listings = listings.filter((l) => l.seller);

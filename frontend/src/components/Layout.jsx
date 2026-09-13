@@ -36,6 +36,9 @@ export default function Layout() {
           <NavLink to="/friends" className={navLinkClass}>
             Friends
           </NavLink>
+          <NavLink to="/market" className={navLinkClass}>
+            Market
+          </NavLink>
           <NavLink to="/messages" className={navLinkClass}>
             Messages
           </NavLink>

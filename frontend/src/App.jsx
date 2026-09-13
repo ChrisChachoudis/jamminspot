@@ -9,6 +9,7 @@ import Music from "./pages/Music.jsx";
 import NearMe from "./pages/NearMe.jsx";
 import Jams from "./pages/Jams.jsx";
 import Friends from "./pages/Friends.jsx";
+import Market from "./pages/Market.jsx";
 import Messages from "./pages/Messages.jsx";
 import Me from "./pages/Me.jsx";
 import Profile from "./pages/Profile.jsx";
@@ -67,6 +68,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Friends />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/market"
+          element={
+            <ProtectedRoute>
+              <Market />
             </ProtectedRoute>
           }
         />

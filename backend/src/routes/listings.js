@@ -4,6 +4,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadListingMedia } from "../middleware/upload.js";
 import { titleFromFilename } from "./users.js";
+import { distanceKm } from "../utils/matching.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -20,6 +21,75 @@ function serializeListing(listing) {
     createdAt: listing.createdAt,
   };
 }
+
+// GET /listings — browse the market (everyone else's listings).
+// Filters: category, minPrice, maxPrice, and an optional area filter
+// (latitude/longitude/maxDistanceKm) — same city+radius pattern as Near Me,
+// applied to the SELLER's location rather than the listing itself (a
+// listing has no location of its own).
+router.get(
+  "/",
+  asyncHandler(async (req, res) => {
+    const { category, minPrice, maxPrice, latitude, longitude, maxDistanceKm } = req.query;
+
+    const query = { seller: { $ne: req.userId } };
+    if (category) {
+      if (!LISTING_CATEGORIES.includes(category)) {
+        return res.status(400).json({ error: `category must be one of: ${LISTING_CATEGORIES.join(", ")}` });
+      }
+      query.category = category;
+    }
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+
+    let listings = await Listing.find(query)
+      .populate("seller", "name media profilePhotoId location")
+      .sort({ createdAt: -1 })
+      .limit(200);
+
+    // Drop listings whose seller account no longer exists.
+    listings = listings.filter((l) => l.seller);
+
+    const lat = Number(latitude);
+    const lon = Number(longitude);
+    const radiusKm = Number(maxDistanceKm);
+    const hasAreaFilter = Number.isFinite(lat) && Number.isFinite(lon) && Number.isFinite(radiusKm) && radiusKm > 0;
+
+    let results = listings.map((listing) => {
+      const sellerCoords = listing.seller.location?.coordinates;
+      const distance = hasAreaFilter && sellerCoords ? distanceKm([lon, lat], sellerCoords) : null;
+      return {
+        id: listing._id,
+        title: listing.title,
+        description: listing.description,
+        price: listing.price,
+        category: listing.category,
+        photos: listing.photos.map((p) => p.url),
+        audio: listing.audio.map((a) => ({ url: a.url, title: a.title })),
+        createdAt: listing.createdAt,
+        distanceKm: distance === null ? null : Math.round(distance),
+        seller: {
+          id: listing.seller._id,
+          name: listing.seller.name,
+          city: listing.seller.location?.city ?? null,
+          media: listing.seller.media,
+          profilePhotoId: listing.seller.profilePhotoId,
+        },
+      };
+    });
+
+    if (hasAreaFilter) {
+      results = results
+        .filter((r) => r.distanceKm !== null && r.distanceKm <= radiusKm)
+        .sort((a, b) => a.distanceKm - b.distanceKm);
+    }
+
+    res.json({ listings: results });
+  })
+);
 
 // GET /listings/mine — the current user's own listings, for managing them
 // from the Me page.

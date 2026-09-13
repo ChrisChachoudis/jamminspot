@@ -6,6 +6,7 @@ import ChipSelect from "../components/ChipSelect.jsx";
 import PlaceAutocomplete from "../components/PlaceAutocomplete.jsx";
 import { searchCountries, searchCities } from "../api/geocoding.js";
 import { SPECIALTIES, INSTRUMENTS, VOCAL_SKILLS, GOALS, GENRES } from "../constants.js";
+import { resolveLandingPage } from "../utils/landing.js";
 
 const STEPS = ["location", "specialty", "goals", "genres", "bio", "gallery"];
 
@@ -135,7 +136,7 @@ export default function Onboarding() {
         bio: bio || undefined,
       });
       await refreshUser();
-      navigate("/discover");
+      navigate(await resolveLandingPage());
     } catch (err) {
       setError(err.response?.data?.error || "Could not save your profile");
     } finally {

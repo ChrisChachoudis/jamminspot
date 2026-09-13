@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import { resolveLandingPage } from "../utils/landing.js";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -18,17 +19,7 @@ export default function Login() {
     try {
       const { data } = await api.post("/auth/login", { email, password });
       await login(data.token);
-
-      // Only land on Discover if there's actually someone to Jam with
-      // right now — otherwise Music is the more useful landing page.
-      let hasDiscoverResults = true;
-      try {
-        const { data: discoverData } = await api.get("/discover");
-        hasDiscoverResults = discoverData.results.length > 0;
-      } catch {
-        // If the check fails, don't block login on it — default to Discover.
-      }
-      navigate(hasDiscoverResults ? "/discover" : "/music");
+      navigate(await resolveLandingPage());
     } catch (err) {
       setError(err.response?.data?.error || "Login failed");
     } finally {

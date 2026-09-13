@@ -62,11 +62,32 @@ export function computeCompatibility(userA, userB) {
     reasons.push({ type: "distance_km", value: Math.round(km) });
   }
 
-  const score =
+  let score =
     genreScore * WEIGHTS.genres +
     goalScore * WEIGHTS.goals +
     complementScore * WEIGHTS.instrumentsComplement +
     distanceScore * WEIGHTS.distance;
+
+  // Viewer-perspective interaction history (userA = viewer, userB =
+  // candidate): people aren't excluded from Discover/Near Me just for
+  // having a pending or declined Jam request, they're ranked down instead
+  // so fresher, mutual-looking matches surface first.
+  const iJammedThem = (userA.swipes || []).some(
+    (s) => s.user.toString() === userB._id.toString() && s.action === "jam"
+  );
+  if (iJammedThem) {
+    const theyDeclinedMe = (userB.swipes || []).some(
+      (s) => s.user.toString() === userA._id.toString() && s.action === "skip"
+    );
+    const theyRespondedAtAll = (userB.swipes || []).some(
+      (s) => s.user.toString() === userA._id.toString()
+    );
+    if (theyDeclinedMe) {
+      score *= 0.1; // declined — still visible, but pushed to the bottom
+    } else if (!theyRespondedAtAll) {
+      score *= 0.5; // pending — deprioritized until they respond
+    }
+  }
 
   return {
     score: Math.round(score * 100),

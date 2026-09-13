@@ -8,6 +8,19 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 const router = Router();
 router.use(requireAuth);
 
+// Only actual Friends (mutual Jam) are ever excluded from Discover/Near Me —
+// people you've skipped, or Jammed without a reply yet, or who declined you
+// keep showing up. computeCompatibility scores those interactions down
+// instead, so they sort low rather than disappearing outright.
+async function getFriendIds(userId) {
+  const jamConversations = await Conversation.find({ participants: userId, isJam: true });
+  return new Set(
+    jamConversations
+      .flatMap((c) => c.participants.map((p) => p.toString()))
+      .filter((id) => id !== userId)
+  );
+}
+
 // GET /discover?specialty=&instrument=&genre=&goal=&maxDistanceKm=&limit=
 router.get(
   "/",
@@ -17,10 +30,10 @@ router.get(
 
     const { specialty, instrument, genre, goal, maxDistanceKm, limit = 20 } = req.query;
 
-    const seenIds = new Set(me.swipes.map((s) => s.user.toString()));
-    seenIds.add(me._id.toString());
+    const excludeIds = await getFriendIds(req.userId);
+    excludeIds.add(me._id.toString());
 
-    const query = { _id: { $nin: Array.from(seenIds) } };
+    const query = { _id: { $nin: Array.from(excludeIds) } };
     if (specialty) query.specialties = specialty;
     if (instrument) query.instruments = instrument;
     if (genre) query.genres = genre;
@@ -68,16 +81,7 @@ router.get(
       return res.status(400).json({ error: "latitude, longitude and a positive maxDistanceKm are required" });
     }
 
-    // Unlike Discover (a one-pass swipe deck), Near Me is a location
-    // directory — people you've skipped or already Jammed should still
-    // show up on a fresh search. Only actual Friends (mutual Jam) are
-    // excluded, same as they're excluded from Discover once matched.
-    const jamConversations = await Conversation.find({ participants: me._id, isJam: true });
-    const excludeIds = new Set(
-      jamConversations
-        .flatMap((c) => c.participants.map((p) => p.toString()))
-        .filter((id) => id !== req.userId)
-    );
+    const excludeIds = await getFriendIds(req.userId);
     excludeIds.add(me._id.toString());
 
     const candidates = await User.find({

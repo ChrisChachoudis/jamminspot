@@ -43,10 +43,21 @@ router.get(
       _id: { $nin: Array.from(respondedIds) },
     });
 
-    const admirers = admirerDocs.map((u) => ({
-      profile: u.toPublicProfile(),
-      compatibility: computeCompatibility(me, u),
-    }));
+    // Sort most-recent Jam request first, so someone who just Jammed you
+    // shows up ahead of requests you've been sitting on for a while.
+    const admirers = admirerDocs
+      .map((u) => {
+        const jamAt = u.swipes
+          .filter((s) => s.user.toString() === me._id.toString() && s.action === "jam")
+          .reduce((latest, s) => (s.createdAt > latest ? s.createdAt : latest), new Date(0));
+        return {
+          profile: u.toPublicProfile(),
+          compatibility: computeCompatibility(me, u),
+          jamAt,
+        };
+      })
+      .sort((a, b) => b.jamAt - a.jamAt)
+      .map(({ profile, compatibility }) => ({ profile, compatibility }));
 
     res.json({ admirers });
   })

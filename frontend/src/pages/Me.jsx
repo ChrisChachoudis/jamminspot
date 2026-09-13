@@ -36,6 +36,7 @@ export default function Me() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState("");
+  const [editingInfo, setEditingInfo] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -342,13 +343,25 @@ export default function Me() {
         )}
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl p-5">
         <h2 className="text-lg font-bold mb-1">Your info</h2>
-        <p className="text-sm text-[var(--jm-text-dim)] mb-4">
-          Update what you set during onboarding — location, specialties, goals and genres.
-        </p>
 
-        <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1">
+        {!editingInfo ? (
+          <>
+            <p className="text-sm text-[var(--jm-text-dim)] mb-4">
+              Location, specialties, goals and genres you set during onboarding.
+            </p>
+            <button
+              type="button"
+              onClick={() => setEditingInfo(true)}
+              className="btn-jam px-6 !mt-0"
+            >
+              Change your info
+            </button>
+          </>
+        ) : (
+          <>
+        <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1 mt-4">
           Country
         </label>
         <PlaceAutocomplete
@@ -420,14 +433,25 @@ export default function Me() {
 
         {profileError && <p className="form-error mt-4">{profileError}</p>}
 
-        <button
-          type="button"
-          onClick={saveProfileSettings}
-          disabled={savingProfile}
-          className="btn-jam px-8 mt-6 disabled:opacity-60"
-        >
-          {savingProfile ? "Saving…" : profileSaved ? "Saved ✓" : "Save changes"}
-        </button>
+        <div className="flex gap-3 mt-6">
+          <button
+            type="button"
+            onClick={saveProfileSettings}
+            disabled={savingProfile}
+            className="btn-jam flex-1 !mt-0 disabled:opacity-60"
+          >
+            {savingProfile ? "Saving…" : profileSaved ? "Saved ✓" : "Save changes"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditingInfo(false)}
+            className="px-6 rounded-full text-sm font-semibold bg-[var(--jm-surface-2)] text-[var(--jm-text-dim)] hover:text-[var(--jm-text)]"
+          >
+            Done
+          </button>
+        </div>
+          </>
+        )}
       </div>
 
       {releaseModalOpen && (

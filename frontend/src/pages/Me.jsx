@@ -240,7 +240,11 @@ export default function Me() {
   const isVocalist = editSpecialties.includes("vocalist");
 
   function addListingPhotos(fileList) {
-    setListingPhotos((prev) => [...prev, ...Array.from(fileList)].slice(0, MAX_LISTING_PHOTOS));
+    // Snapshot into a plain array immediately — e.target.files is a *live*
+    // FileList, and the caller resets e.target.value right after this call,
+    // which empties that same live list before this state update runs.
+    const files = Array.from(fileList);
+    setListingPhotos((prev) => [...prev, ...files].slice(0, MAX_LISTING_PHOTOS));
   }
 
   function removeListingPhoto(index) {
@@ -248,7 +252,8 @@ export default function Me() {
   }
 
   function addListingAudio(fileList) {
-    setListingAudio((prev) => [...prev, ...Array.from(fileList)].slice(0, MAX_LISTING_AUDIO));
+    const files = Array.from(fileList);
+    setListingAudio((prev) => [...prev, ...files].slice(0, MAX_LISTING_AUDIO));
   }
 
   function removeListingAudio(index) {

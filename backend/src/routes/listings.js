@@ -106,6 +106,18 @@ router.get(
   })
 );
 
+// GET /listings/user/:id — a specific person's listings, viewable by anyone
+// signed in. Powers the "Seller" badge on Profile/Discover/Near Me cards
+// (a non-empty result means they have something for sale) and the seller
+// detail page it links to.
+router.get(
+  "/user/:id",
+  asyncHandler(async (req, res) => {
+    const listings = await Listing.find({ seller: req.params.id }).sort({ createdAt: -1 });
+    res.json({ listings: listings.map(serializeListing) });
+  })
+);
+
 // POST /listings — multipart: title, description, price, category,
 // photos[] (1-5 images, required), audio[] (0-3 MP3s, optional preview).
 router.post(

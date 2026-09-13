@@ -265,6 +265,16 @@ export default function Me() {
                 Discography
               </Link>
             )}
+            {listings.length > 0 && (
+              <Link
+                to={`/seller/${user.id}`}
+                className="flex flex-col items-center text-[10px] text-[var(--jm-text-dim)] hover:text-[var(--jm-jam)]"
+                title="View what you're selling"
+              >
+                <span className="text-lg leading-none">🛒</span>
+                Seller
+              </Link>
+            )}
           </div>
           {user.city && <p className="text-sm text-[var(--jm-text-dim)]">{user.city}</p>}
 

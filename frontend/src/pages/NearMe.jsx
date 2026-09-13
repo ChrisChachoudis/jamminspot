@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -22,6 +22,7 @@ export default function NearMe() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [jamToast, setJamToast] = useState(null);
+  const [listingCount, setListingCount] = useState(0);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -65,6 +66,15 @@ export default function NearMe() {
   }
 
   const current = results?.[index];
+
+  useEffect(() => {
+    if (!current) return;
+    setListingCount(0);
+    api
+      .get(`/listings/user/${current.profile.id}`)
+      .then(({ data }) => setListingCount(data.listings.length))
+      .catch(() => setListingCount(0));
+  }, [current?.profile.id]);
 
   async function swipe(action) {
     if (!current) return;
@@ -221,6 +231,17 @@ export default function NearMe() {
                         >
                           <span className="text-base leading-none">💽</span>
                           Discography
+                        </Link>
+                      )}
+                      {listingCount > 0 && (
+                        <Link
+                          to={`/seller/${profile.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex flex-col items-center text-[9px] text-[var(--jm-text-dim)] hover:text-[var(--jm-jam)]"
+                          title="View what they're selling"
+                        >
+                          <span className="text-base leading-none">🛒</span>
+                          Seller
                         </Link>
                       )}
                     </div>

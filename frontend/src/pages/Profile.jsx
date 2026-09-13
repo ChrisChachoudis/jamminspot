@@ -10,6 +10,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [jamStatus, setJamStatus] = useState(null); // null | "sending" | "sent" | "matched" | "error"
+  const [listingCount, setListingCount] = useState(0);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -21,6 +22,10 @@ export default function Profile() {
       .then(({ data }) => setProfile(data.user))
       .catch((err) => setError(err.response?.data?.error || "Could not load profile"))
       .finally(() => setLoading(false));
+    api
+      .get(`/listings/user/${id}`)
+      .then(({ data }) => setListingCount(data.listings.length))
+      .catch(() => setListingCount(0));
   }, [id]);
 
   if (loading) return <div className="p-10 text-center text-[var(--jm-text-dim)]">Loading…</div>;
@@ -75,6 +80,16 @@ export default function Profile() {
               >
                 <span className="text-lg leading-none">💽</span>
                 Discography
+              </Link>
+            )}
+            {listingCount > 0 && (
+              <Link
+                to={`/seller/${profile.id}`}
+                className="flex flex-col items-center text-[10px] text-[var(--jm-text-dim)] hover:text-[var(--jm-jam)]"
+                title="View what they're selling"
+              >
+                <span className="text-lg leading-none">🛒</span>
+                Seller
               </Link>
             )}
           </div>

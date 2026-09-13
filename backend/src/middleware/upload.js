@@ -81,3 +81,29 @@ export const uploadRelease = multer({
   { name: "audio", maxCount: MAX_TRACKS_PER_RELEASE },
   { name: "cover", maxCount: 1 },
 ]);
+
+// Marketplace listing photos: up to 5 images per listing.
+const listingStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const listingsDir = path.join(UPLOADS_DIR, req.userId, "listings");
+    fs.mkdirSync(listingsDir, { recursive: true });
+    cb(null, listingsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+
+export const MAX_LISTING_PHOTOS = 5;
+
+export const uploadListingPhotos = multer({
+  storage: listingStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      return cb(null, true);
+    }
+    cb(rejectedFileType("Listing photos must be images"));
+  },
+}).array("photos", MAX_LISTING_PHOTOS);

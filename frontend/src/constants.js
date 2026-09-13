@@ -73,3 +73,13 @@ export const GENRES = [
   "reggae",
   "funk",
 ].map((v) => ({ value: v, label: v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }));
+
+// Mirrors backend/src/models/Listing.js LISTING_CATEGORIES.
+export const LISTING_CATEGORIES = [
+  { value: "instruments", label: "Instruments" },
+  { value: "gear", label: "Gear & Equipment" },
+  { value: "digital", label: "Digital (beats, samples, presets)" },
+  { value: "services", label: "Services (lessons, mixing, session work)" },
+  { value: "merch", label: "Merch" },
+  { value: "other", label: "Other" },
+];

@@ -7,7 +7,9 @@ import UploadReleaseModal from "../components/UploadReleaseModal.jsx";
 import ChipSelect from "../components/ChipSelect.jsx";
 import PlaceAutocomplete from "../components/PlaceAutocomplete.jsx";
 import { searchCountries, searchCities } from "../api/geocoding.js";
-import { SPECIALTIES, INSTRUMENTS, VOCAL_SKILLS, GOALS, GENRES } from "../constants.js";
+import { SPECIALTIES, INSTRUMENTS, VOCAL_SKILLS, GOALS, GENRES, LISTING_CATEGORIES } from "../constants.js";
+
+const MAX_LISTING_PHOTOS = 5;
 
 function toggle(list, value) {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -38,9 +40,24 @@ export default function Me() {
   const [profileError, setProfileError] = useState("");
   const [editingInfo, setEditingInfo] = useState(false);
 
+  const [listings, setListings] = useState([]);
+  const [sellingOpen, setSellingOpen] = useState(false);
+  const [listingTitle, setListingTitle] = useState("");
+  const [listingDescription, setListingDescription] = useState("");
+  const [listingPrice, setListingPrice] = useState("");
+  const [listingCategory, setListingCategory] = useState(LISTING_CATEGORIES[0].value);
+  const [listingPhotos, setListingPhotos] = useState([]);
+  const [listingSubmitting, setListingSubmitting] = useState(false);
+  const [listingError, setListingError] = useState("");
+
   useEffect(() => {
     if (!user) return;
     api.get(`/users/${user.id}/releases`).then(({ data }) => setReleases(data.releases));
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    api.get("/listings/mine").then(({ data }) => setListings(data.listings));
   }, [user?.id]);
 
   // Seed the editable-settings form once per logged-in user, not on every
@@ -162,6 +179,55 @@ export default function Me() {
 
   const isInstrumentalist = editSpecialties.includes("instrumentalist");
   const isVocalist = editSpecialties.includes("vocalist");
+
+  function addListingPhotos(fileList) {
+    setListingPhotos((prev) => [...prev, ...Array.from(fileList)].slice(0, MAX_LISTING_PHOTOS));
+  }
+
+  function removeListingPhoto(index) {
+    setListingPhotos((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function submitListing() {
+    setListingError("");
+    if (!listingTitle.trim()) return setListingError("Title is required");
+    if (!listingPrice || Number(listingPrice) < 0) return setListingError("Enter a valid price");
+    if (!listingPhotos.length) return setListingError("Add at least one photo");
+
+    setListingSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", listingTitle);
+      formData.append("description", listingDescription);
+      formData.append("price", listingPrice);
+      formData.append("category", listingCategory);
+      listingPhotos.forEach((file) => formData.append("photos", file));
+
+      const { data } = await api.post("/listings", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setListings((prev) => [data.listing, ...prev]);
+      setListingTitle("");
+      setListingDescription("");
+      setListingPrice("");
+      setListingCategory(LISTING_CATEGORIES[0].value);
+      setListingPhotos([]);
+      setSellingOpen(false);
+    } catch (err) {
+      setListingError(err.response?.data?.error || "Could not post your listing");
+    } finally {
+      setListingSubmitting(false);
+    }
+  }
+
+  async function removeListing(listingId) {
+    try {
+      const { data } = await api.delete(`/listings/${listingId}`);
+      setListings(data.listings);
+    } catch {
+      // Best-effort — leave the list as-is if the delete fails.
+    }
+  }
 
   return (
     <div className="max-w-xl mx-auto p-6">
@@ -451,6 +517,177 @@ export default function Me() {
           </button>
         </div>
           </>
+        )}
+      </div>
+
+      <div className="mt-8 bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl p-5">
+        <h2 className="text-lg font-bold mb-1">Sell something</h2>
+
+        {!sellingOpen ? (
+          <>
+            <p className="text-sm text-[var(--jm-text-dim)] mb-4">
+              List an instrument, gear, a service or anything else for other musicians to see.
+            </p>
+            <button
+              type="button"
+              onClick={() => setSellingOpen(true)}
+              className="btn-jam px-6 !mt-0"
+            >
+              Post a listing
+            </button>
+          </>
+        ) : (
+          <>
+            <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1 mt-4">
+              Title
+            </label>
+            <input
+              value={listingTitle}
+              onChange={(e) => setListingTitle(e.target.value)}
+              placeholder="e.g. Fender Stratocaster, mint condition"
+              className="w-full bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--jm-jam)]"
+            />
+
+            <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1 mt-4">
+              Description
+            </label>
+            <textarea
+              value={listingDescription}
+              onChange={(e) => setListingDescription(e.target.value)}
+              rows={3}
+              placeholder="Condition, details, anything a buyer should know"
+              className="w-full bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl p-3 text-sm outline-none focus:border-[var(--jm-jam)]"
+            />
+
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div>
+                <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1">
+                  Price (€)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={listingPrice}
+                  onChange={(e) => setListingPrice(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--jm-jam)]"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1">
+                  Category
+                </label>
+                <select
+                  value={listingCategory}
+                  onChange={(e) => setListingCategory(e.target.value)}
+                  className="w-full bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--jm-jam)]"
+                >
+                  {LISTING_CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <label className="text-sm font-semibold text-[var(--jm-text-dim)] block mb-1 mt-4">
+              Photos (up to {MAX_LISTING_PHOTOS})
+            </label>
+            <label className="block border border-dashed border-[var(--jm-border)] rounded-xl p-6 text-center text-[var(--jm-text-dim)] text-sm cursor-pointer hover:border-[var(--jm-jam)]">
+              {listingPhotos.length >= MAX_LISTING_PHOTOS
+                ? "Maximum photos added"
+                : "Click to add photos"}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={listingPhotos.length >= MAX_LISTING_PHOTOS}
+                onChange={(e) => {
+                  if (e.target.files?.length) addListingPhotos(e.target.files);
+                  e.target.value = "";
+                }}
+                className="hidden"
+              />
+            </label>
+
+            {listingPhotos.length > 0 && (
+              <div className="grid grid-cols-5 gap-2 mt-3">
+                {listingPhotos.map((file, i) => (
+                  <div
+                    key={i}
+                    className="relative aspect-square bg-[var(--jm-surface-2)] rounded-lg overflow-hidden border border-[var(--jm-border)]"
+                  >
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeListingPhoto(i)}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-[10px] leading-5"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {listingError && <p className="form-error mt-3">{listingError}</p>}
+
+            <div className="flex gap-3 mt-6">
+              <button
+                type="button"
+                onClick={submitListing}
+                disabled={listingSubmitting}
+                className="btn-jam flex-1 !mt-0 disabled:opacity-60"
+              >
+                {listingSubmitting ? "Posting…" : "Post listing"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSellingOpen(false)}
+                className="px-6 rounded-full text-sm font-semibold bg-[var(--jm-surface-2)] text-[var(--jm-text-dim)] hover:text-[var(--jm-text)]"
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
+
+        {listings.length > 0 && (
+          <div className="mt-6 space-y-2">
+            <h3 className="text-sm font-semibold text-[var(--jm-text-dim)] mb-2">Your listings</h3>
+            {listings.map((listing) => (
+              <div
+                key={listing.id}
+                className="flex items-center gap-3 bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl p-3"
+              >
+                <img
+                  src={mediaUrl({ url: listing.photos[0] })}
+                  alt=""
+                  className="w-12 h-12 rounded-lg object-cover shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{listing.title}</p>
+                  <p className="text-xs text-[var(--jm-text-dim)]">
+                    €{listing.price} ·{" "}
+                    {LISTING_CATEGORIES.find((c) => c.value === listing.category)?.label}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeListing(listing.id)}
+                  className="w-7 h-7 rounded-full bg-[var(--jm-surface)] text-xs shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

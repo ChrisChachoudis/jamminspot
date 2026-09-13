@@ -3,12 +3,19 @@
 // can run over every Discover candidate. An AI-driven score can be added
 // later as an alternative "explain" layer on top of this.
 
-// Most recent action `swipes` (an interaction array on a User doc) records
-// against `targetId`, or null if there's no such swipe at all.
-function latestSwipeAction(swipes, targetId) {
-  const onTarget = (swipes || []).filter((s) => s.user.toString() === targetId);
+// All `swipes` (an interaction array on a User doc) recorded against
+// `targetId`, oldest first.
+function swipesOnTarget(swipes, targetId) {
+  return (swipes || []).filter((s) => s.user.toString() === targetId);
+}
+
+function latestAction(onTarget) {
   if (!onTarget.length) return null;
   return onTarget.reduce((latest, s) => (s.createdAt > latest.createdAt ? s : latest)).action;
+}
+
+function countAction(onTarget, action) {
+  return onTarget.filter((s) => s.action === action).length;
 }
 
 function overlapRatio(a = [], b = []) {
@@ -79,18 +86,26 @@ export function computeCompatibility(userA, userB) {
   // Viewer-perspective interaction history (userA = viewer, userB =
   // candidate): people aren't excluded from Discover/Near Me just for a
   // skip, a pending Jam request, or a declined one — they're ranked down
-  // instead so fresher, mutual-looking matches surface first. Only each
-  // side's LATEST action counts, so re-encountering someone after a swipe
-  // (once re-ranked on the next fetch) reflects the current state, not
-  // some earlier one.
-  const myLatestOnThem = latestSwipeAction(userA.swipes, userB._id.toString());
-  const theirLatestOnMe = latestSwipeAction(userB.swipes, userA._id.toString());
+  // instead so fresher, mutual-looking matches surface first. Whose LATEST
+  // action it is decides which regime applies (skip / pending / declined);
+  // repeating that same decline again compounds the penalty further each
+  // time instead of freezing at the first drop.
+  const myActionsOnThem = swipesOnTarget(userA.swipes, userB._id.toString());
+  const theirActionsOnMe = swipesOnTarget(userB.swipes, userA._id.toString());
+  const myLatestOnThem = latestAction(myActionsOnThem);
+  const theirLatestOnMe = latestAction(theirActionsOnMe);
 
   if (myLatestOnThem === "skip") {
-    score *= 0.1; // you already passed on them — still visible, just last
+    // you already passed on them — still visible, just pushed way down,
+    // and every extra time you skip them again it halves again from there.
+    const skipCount = countAction(myActionsOnThem, "skip");
+    score *= 0.1 * Math.pow(0.5, skipCount - 1);
   } else if (myLatestOnThem === "jam") {
     if (theirLatestOnMe === "skip") {
-      score *= 0.1; // they declined your Jam request
+      // they declined your Jam request — same compounding treatment,
+      // based on how many times THEY've declined you.
+      const theirSkipCount = countAction(theirActionsOnMe, "skip");
+      score *= 0.1 * Math.pow(0.5, theirSkipCount - 1);
     } else if (!theirLatestOnMe) {
       score *= 0.5; // pending — deprioritized until they respond
     }

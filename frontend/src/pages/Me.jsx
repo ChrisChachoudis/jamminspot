@@ -136,9 +136,9 @@ export default function Me() {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-lg font-bold mb-1">Your photos</h2>
+        <h2 className="text-lg font-bold mb-1">Your photo</h2>
         <p className="text-sm text-[var(--jm-text-dim)] mb-4">
-          Choose which photo shows as your profile picture across Jamminspot.
+          Choose which photo you want as your profile picture.
         </p>
 
         <label className="block border border-dashed border-[var(--jm-border)] rounded-xl p-6 text-center text-[var(--jm-text-dim)] text-sm cursor-pointer hover:border-[var(--jm-jam)] mb-4">

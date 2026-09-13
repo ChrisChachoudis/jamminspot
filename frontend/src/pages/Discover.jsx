@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client.js";
+import { useAuth } from "../context/AuthContext.jsx";
 import { coverPhotoUrl } from "../utils/media.js";
 
 export default function Discover() {
@@ -9,6 +10,7 @@ export default function Discover() {
   const [loading, setLoading] = useState(true);
   const [jamToast, setJamToast] = useState(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   async function loadResults() {
     setLoading(true);
@@ -35,6 +37,19 @@ export default function Discover() {
       setTimeout(() => setJamToast(null), 2500);
     }
     setIndex((i) => i + 1);
+  }
+
+  function messageCurrent() {
+    // Everyone shown in Discover is, by definition, not a Friend yet
+    // (already-Jammed people are excluded from Discover) — so this gate
+    // always applies here, unlike on the Messages page for an existing Friend.
+    if (!user?.premium) {
+      alert(
+        "Only Premium members can message musicians they haven't Jammed with yet. Jam them first, or upgrade to Premium."
+      );
+      return;
+    }
+    navigate(`/messages?to=${current.profile.id}`);
   }
 
   async function rewind() {
@@ -151,9 +166,9 @@ export default function Discover() {
           ✕
         </button>
         <button
-          onClick={() => navigate(`/messages?to=${profile.id}`)}
+          onClick={messageCurrent}
           className="btn-message w-11 h-11 text-lg"
-          title="Message"
+          title={user?.premium ? "Message" : "Message (Premium required)"}
         >
           💬
         </button>

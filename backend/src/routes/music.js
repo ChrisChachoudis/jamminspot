@@ -14,7 +14,8 @@ function reasonLabel(reason) {
   if (reason === "friend") return "Because a friend of yours liked this";
   if (reason === "similar_taste") return "Because people with similar taste liked this";
   if (reason === "wildcard") return "🔀 Something different for you";
-  if (reason.type === "genre") return `Because you're into ${reason.genre.replace(/_/g, " ")}`;
+  // Genre-match is the weakest/most common reason — showing no label for
+  // it keeps the "Because..." tag meaningful when it does appear.
   return null;
 }
 

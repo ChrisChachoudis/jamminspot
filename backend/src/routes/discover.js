@@ -56,6 +56,9 @@ router.get(
 router.get(
   "/near-me",
   asyncHandler(async (req, res) => {
+    const me = await User.findById(req.userId);
+    if (!me) return res.status(404).json({ error: "User not found" });
+
     const { latitude, longitude, maxDistanceKm, limit = 40 } = req.query;
     const lat = Number(latitude);
     const lon = Number(longitude);
@@ -65,8 +68,11 @@ router.get(
       return res.status(400).json({ error: "latitude, longitude and a positive maxDistanceKm are required" });
     }
 
+    const seenIds = new Set(me.swipes.map((s) => s.user.toString()));
+    seenIds.add(me._id.toString());
+
     const candidates = await User.find({
-      _id: { $ne: req.userId },
+      _id: { $nin: Array.from(seenIds) },
       location: {
         $nearSphere: {
           $geometry: { type: "Point", coordinates: [lon, lat] },
@@ -78,6 +84,7 @@ router.get(
     const results = candidates
       .map((candidate) => ({
         profile: candidate.toPublicProfile(),
+        compatibility: computeCompatibility(me, candidate),
         distanceKm: Math.round(distanceKm([lon, lat], candidate.location.coordinates)),
       }))
       .sort((a, b) => a.distanceKm - b.distanceKm);

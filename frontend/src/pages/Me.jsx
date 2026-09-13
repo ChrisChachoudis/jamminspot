@@ -24,6 +24,12 @@ export default function Me() {
   const [releases, setReleases] = useState([]);
   const [releaseModalOpen, setReleaseModalOpen] = useState(false);
   const [releaseError, setReleaseError] = useState("");
+  const [musicOpen, setMusicOpen] = useState(false);
+  const [editingReleaseId, setEditingReleaseId] = useState(null);
+  const [editReleaseTitle, setEditReleaseTitle] = useState("");
+  const [editTracks, setEditTracks] = useState([]);
+  const [editReleaseSaving, setEditReleaseSaving] = useState(false);
+  const [editReleaseError, setEditReleaseError] = useState("");
 
   const [countryInput, setCountryInput] = useState("");
   const [country, setCountry] = useState(null);
@@ -93,6 +99,49 @@ export default function Me() {
       setReleases(data.releases);
     } catch (err) {
       setReleaseError(err.response?.data?.error || "Could not remove release");
+    }
+  }
+
+  function startEditRelease(release) {
+    setEditingReleaseId(release._id);
+    setEditReleaseTitle(release.title);
+    setEditTracks(release.tracks.map((t) => ({ trackId: t._id, title: t.title, genres: t.genres || [] })));
+    setEditReleaseError("");
+  }
+
+  function cancelEditRelease() {
+    setEditingReleaseId(null);
+    setEditReleaseError("");
+  }
+
+  function updateEditTrackTitle(trackId, title) {
+    setEditTracks((prev) => prev.map((t) => (t.trackId === trackId ? { ...t, title } : t)));
+  }
+
+  function toggleEditTrackGenre(trackId, genre) {
+    setEditTracks((prev) =>
+      prev.map((t) => (t.trackId === trackId ? { ...t, genres: toggle(t.genres, genre) } : t))
+    );
+  }
+
+  async function saveEditRelease(releaseId) {
+    setEditReleaseError("");
+    if (!editReleaseTitle.trim()) return setEditReleaseError("Title is required");
+    if (editTracks.some((t) => !t.title.trim())) {
+      return setEditReleaseError("Every track needs a title");
+    }
+    setEditReleaseSaving(true);
+    try {
+      const { data } = await api.patch(`/users/me/releases/${releaseId}`, {
+        title: editReleaseTitle,
+        tracks: editTracks,
+      });
+      setReleases(data.releases);
+      setEditingReleaseId(null);
+    } catch (err) {
+      setEditReleaseError(err.response?.data?.error || "Could not save changes");
+    } finally {
+      setEditReleaseSaving(false);
     }
   }
 
@@ -429,50 +478,154 @@ export default function Me() {
         )}
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl p-5">
         <h2 className="text-lg font-bold mb-1">Your music</h2>
-        <p className="text-sm text-[var(--jm-text-dim)] mb-4">
-          Upload tracks (MP3 + cover art) to build your discography.
-        </p>
 
-        <button
-          type="button"
-          onClick={() => setReleaseModalOpen(true)}
-          className="block w-full border border-dashed border-[var(--jm-border)] rounded-xl p-6 text-center text-[var(--jm-text-dim)] text-sm cursor-pointer hover:border-[var(--jm-jam)] mb-4"
-        >
-          Upload your music
-        </button>
+        {!musicOpen ? (
+          <>
+            <p className="text-sm text-[var(--jm-text-dim)] mb-4">
+              Tracks and releases you've uploaded to your discography.
+            </p>
+            <button
+              type="button"
+              onClick={() => setMusicOpen(true)}
+              className="btn-jam px-6 !mt-0"
+            >
+              View
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setReleaseModalOpen(true)}
+              className="block w-full border border-dashed border-[var(--jm-border)] rounded-xl p-6 text-center text-[var(--jm-text-dim)] text-sm cursor-pointer hover:border-[var(--jm-jam)] mt-4 mb-4"
+            >
+              Upload your music
+            </button>
 
-        {releaseError && <p className="form-error mb-3">{releaseError}</p>}
+            {releaseError && <p className="form-error mb-3">{releaseError}</p>}
 
-        {releases.length > 0 && (
-          <div className="space-y-2">
-            {releases.map((release) => (
-              <div
-                key={release._id}
-                className="flex items-center gap-3 bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-xl p-3"
-              >
-                <img
-                  src={mediaUrl({ url: release.coverUrl })}
-                  alt=""
-                  className="w-12 h-12 rounded-lg object-cover"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{release.title}</p>
-                  <p className="text-xs text-[var(--jm-text-dim)]">
-                    {release.tracks.length} track{release.tracks.length === 1 ? "" : "s"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeRelease(release._id)}
-                  className="w-7 h-7 rounded-full bg-[var(--jm-surface-2)] text-xs shrink-0"
-                >
-                  ✕
-                </button>
+            {!releases.length ? (
+              <p className="text-sm text-[var(--jm-text-dim)]">Nothing uploaded yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {releases.map((release) =>
+                  editingReleaseId === release._id ? (
+                    <div
+                      key={release._id}
+                      className="bg-[var(--jm-surface-2)] border border-[var(--jm-jam)] rounded-xl p-3"
+                    >
+                      <label className="text-xs font-semibold text-[var(--jm-text-dim)] block mb-1">
+                        Release title
+                      </label>
+                      <input
+                        value={editReleaseTitle}
+                        onChange={(e) => setEditReleaseTitle(e.target.value)}
+                        className="w-full bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--jm-jam)]"
+                      />
+
+                      <div className="mt-3 space-y-3">
+                        {editTracks.map((t) => (
+                          <div
+                            key={t.trackId}
+                            className="bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-lg p-2"
+                          >
+                            <label className="text-xs font-semibold text-[var(--jm-text-dim)] block mb-1">
+                              Track title
+                            </label>
+                            <input
+                              value={t.title}
+                              onChange={(e) => updateEditTrackTitle(t.trackId, e.target.value)}
+                              className="w-full bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-lg px-2 py-1.5 text-sm outline-none focus:border-[var(--jm-jam)] mb-2"
+                            />
+                            <div className="flex flex-wrap gap-1.5">
+                              {GENRES.map((g) => {
+                                const active = t.genres.includes(g.value);
+                                return (
+                                  <button
+                                    key={g.value}
+                                    type="button"
+                                    onClick={() => toggleEditTrackGenre(t.trackId, g.value)}
+                                    className={`px-2 py-0.5 rounded-full text-[11px] border transition-colors ${
+                                      active
+                                        ? "bg-[var(--jm-jam)] border-[var(--jm-jam)] text-white"
+                                        : "bg-[var(--jm-surface-2)] border-[var(--jm-border)] text-[var(--jm-text-dim)]"
+                                    }`}
+                                  >
+                                    {g.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {editReleaseError && <p className="form-error mt-2">{editReleaseError}</p>}
+
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() => saveEditRelease(release._id)}
+                          disabled={editReleaseSaving}
+                          className="btn-jam flex-1 !mt-0 py-2 text-sm disabled:opacity-60"
+                        >
+                          {editReleaseSaving ? "Saving…" : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEditRelease}
+                          className="px-4 rounded-full text-sm font-semibold bg-[var(--jm-surface)] text-[var(--jm-text-dim)] hover:text-[var(--jm-text)]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      key={release._id}
+                      className="flex items-center gap-3 bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl p-3"
+                    >
+                      <img
+                        src={mediaUrl({ url: release.coverUrl })}
+                        alt=""
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{release.title}</p>
+                        <p className="text-xs text-[var(--jm-text-dim)]">
+                          {release.tracks.length} track{release.tracks.length === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => startEditRelease(release)}
+                        className="text-xs font-semibold text-[var(--jm-jam)] shrink-0"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeRelease(release._id)}
+                        className="w-7 h-7 rounded-full bg-[var(--jm-surface)] text-xs shrink-0"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )
+                )}
               </div>
-            ))}
-          </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setMusicOpen(false)}
+              className="mt-4 px-6 rounded-full text-sm font-semibold bg-[var(--jm-surface-2)] text-[var(--jm-text-dim)] hover:text-[var(--jm-text)]"
+            >
+              Done
+            </button>
+          </>
         )}
       </div>
 

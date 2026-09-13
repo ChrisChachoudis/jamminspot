@@ -270,6 +270,50 @@ router.post(
   })
 );
 
+// PATCH /users/me/releases/:releaseId { title?, tracks?: [{ trackId, title?, genres? }] }
+// Edit a release's name and/or a track's name/genres — audio and cover
+// files themselves aren't replaceable, only their metadata.
+router.patch(
+  "/me/releases/:releaseId",
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const release = user.releases.id(req.params.releaseId);
+    if (!release) return res.status(404).json({ error: "Release not found" });
+
+    const { title, tracks } = req.body;
+
+    if (title !== undefined) {
+      if (!title.trim()) return res.status(400).json({ error: "title is required" });
+      release.title = title.trim();
+    }
+
+    if (tracks !== undefined) {
+      if (!Array.isArray(tracks)) {
+        return res.status(400).json({ error: "tracks must be an array" });
+      }
+      for (const t of tracks) {
+        const track = release.tracks.id(t.trackId);
+        if (!track) return res.status(400).json({ error: `Unknown track: ${t.trackId}` });
+        if (t.title !== undefined) {
+          if (!t.title.trim()) return res.status(400).json({ error: "track title is required" });
+          track.title = t.title.trim();
+        }
+        if (t.genres !== undefined) {
+          if (!Array.isArray(t.genres) || t.genres.some((g) => !GENRES.includes(g))) {
+            return res.status(400).json({ error: "track genres contain an invalid value" });
+          }
+          track.genres = t.genres;
+        }
+      }
+    }
+
+    await user.save();
+    res.json({ releases: user.releases });
+  })
+);
+
 router.delete(
   "/me/releases/:releaseId",
   asyncHandler(async (req, res) => {

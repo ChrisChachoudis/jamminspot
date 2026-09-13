@@ -1,4 +1,4 @@
-import { generateText } from "./geminiClient.js";
+import { generateText } from "./aiClient.js";
 
 const SYSTEM = `You write short opening messages for Jamminspot, a musician discovery and
 collaboration app. Given both musicians' profiles, suggest one opener the sender could send.

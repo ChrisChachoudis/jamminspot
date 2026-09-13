@@ -1,4 +1,4 @@
-import { generateText } from "./geminiClient.js";
+import { generateText } from "./aiClient.js";
 
 const SYSTEM = `You rank music tracks for a listener on Jamminspot, a musician
 discovery app. You will get the listener's favorite genres and a list of

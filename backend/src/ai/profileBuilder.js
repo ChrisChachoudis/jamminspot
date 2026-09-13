@@ -1,4 +1,4 @@
-import { generateText } from "./geminiClient.js";
+import { generateText } from "./aiClient.js";
 
 const SYSTEM = `You write short musician bios for Jamminspot, a musician discovery and
 collaboration app. Given a free-text description of a musician, write a bio.

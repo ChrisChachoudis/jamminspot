@@ -2,14 +2,14 @@
 
 Musician discovery, matching and collaboration app — find people to Jam
 with based on instruments, genres, goals and location, then chat and
-collaborate. AI features (bio builder, icebreakers) via Gemini.
+collaborate. AI features (bio builder, icebreakers, taste-based ranking) via Groq.
 
 **Live:** https://stalwart-dolphin-f354c2.netlify.app
 **API:** https://jamminspot.onrender.com
 
 ## Structure
 
-- `backend/` — Node.js + Express API, MongoDB (Mongoose), JWT auth, Gemini AI
+- `backend/` — Node.js + Express API, MongoDB (Mongoose), JWT auth, Groq AI
 - `frontend/` — React + Vite, Tailwind-style CSS
 - `tools/` — local MongoDB binaries + dev startup scripts (gitignored)
 
@@ -31,7 +31,7 @@ npm install
 npm run dev
 ```
 Runs on `http://localhost:5000`. Config in `backend/.env` (copy from
-`.env.example` — needs `MONGODB_URI`, `JWT_SECRET`, `GEMINI_API_KEY`).
+`.env.example` — needs `MONGODB_URI`, `JWT_SECRET`, `GROQ_API_KEY`).
 
 **Frontend**
 ```bash
@@ -66,7 +66,7 @@ would need external storage (e.g. Cloudinary) for real persistence.
 - Messaging: 3-pane (conversations / chat / profile), AI icebreaker
   suggestions, Premium-gated DMs to non-friends
 - Profile: photo management, pick which photo is your profile picture
-- AI features: bio generation and message icebreakers via Gemini
+- AI features: bio generation, message icebreakers, and Music feed ranking via Groq
 
 ## Not built yet
 

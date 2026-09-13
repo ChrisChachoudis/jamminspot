@@ -62,7 +62,7 @@ router.get(
 
     const otherTracks = allTracks.filter((t) => !friendIds.has(t.owner._id.toString()));
 
-    const relevanceRanked = await rankTracksByTaste(me.genres, otherTracks);
+    const relevanceRanked = await rankTracksByTaste(me.genres, otherTracks, req.userId);
     const relevanceRank = new Map(
       relevanceRanked.map((t, i) => [t.track._id.toString(), i])
     );

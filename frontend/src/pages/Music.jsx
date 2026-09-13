@@ -7,11 +7,19 @@ const TABS = [
   { value: "friends", label: "Friends" },
 ];
 
+const PAGE_SIZE = 10;
+
 export default function Music() {
   const [friendTracks, setFriendTracks] = useState([]);
   const [forYouTracks, setForYouTracks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("forYou");
+  const [page, setPage] = useState(1);
+
+  function selectTab(value) {
+    setTab(value);
+    setPage(1);
+  }
 
   useEffect(() => {
     api.get("/music/feed").then(({ data }) => {
@@ -61,6 +69,8 @@ export default function Music() {
     friends: "No new tracks from your Friends yet.",
   };
   const activeTracks = tracksByTab[tab];
+  const totalPages = Math.max(1, Math.ceil(activeTracks.length / PAGE_SIZE));
+  const pageTracks = activeTracks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="max-w-xl mx-auto p-6">
@@ -74,7 +84,7 @@ export default function Music() {
           <button
             key={t.value}
             type="button"
-            onClick={() => setTab(t.value)}
+            onClick={() => selectTab(t.value)}
             className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
               tab === t.value
                 ? "bg-[var(--jm-jam)] text-white"
@@ -87,7 +97,44 @@ export default function Music() {
       </div>
 
       {activeTracks.length > 0 ? (
-        <div className="space-y-2">{activeTracks.map(renderTrack)}</div>
+        <>
+          <div className="space-y-2">{pageTracks.map(renderTrack)}</div>
+
+          {totalPages > 1 && (
+            <div className="flex flex-wrap justify-center gap-1.5 mt-6">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="w-8 h-8 rounded-full text-sm bg-[var(--jm-surface-2)] text-[var(--jm-text-dim)] disabled:opacity-30"
+              >
+                ‹
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPage(p)}
+                  className={`w-8 h-8 rounded-full text-sm font-semibold ${
+                    p === page
+                      ? "bg-[var(--jm-jam)] text-white"
+                      : "bg-[var(--jm-surface-2)] text-[var(--jm-text-dim)] hover:text-[var(--jm-text)]"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="w-8 h-8 rounded-full text-sm bg-[var(--jm-surface-2)] text-[var(--jm-text-dim)] disabled:opacity-30"
+              >
+                ›
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <p className="text-sm text-[var(--jm-text-dim)]">{emptyMessage[tab]}</p>
       )}

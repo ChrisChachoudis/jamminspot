@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { coverPhotoUrl } from "../utils/media.js";
+import PhotoWithFallback from "../components/PhotoWithFallback.jsx";
 
 export default function Discover() {
   const [results, setResults] = useState([]);
@@ -102,11 +103,7 @@ export default function Discover() {
           onClick={() => navigate(`/profile/${profile.id}`)}
           className="w-full h-80 bg-[var(--jm-surface-2)] flex items-center justify-center text-5xl"
         >
-          {photo ? (
-            <img src={photo} alt={profile.name} className="w-full h-full object-cover" />
-          ) : (
-            "🎵"
-          )}
+          <PhotoWithFallback src={photo} alt={profile.name} />
         </button>
 
         <div className="p-5">

@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import PlaceAutocomplete from "../components/PlaceAutocomplete.jsx";
 import { searchCountries, searchCities } from "../api/geocoding.js";
 import { coverPhotoUrl } from "../utils/media.js";
+import PhotoWithFallback from "../components/PhotoWithFallback.jsx";
 
 // Facebook-Marketplace-style radius picker — a plain km list, not tied to
 // the backend's same_city/nearby/... distance bands (those describe a
@@ -211,11 +212,7 @@ export default function NearMe() {
                   onClick={() => navigate(`/profile/${profile.id}`)}
                   className="w-full h-80 bg-[var(--jm-surface-2)] flex items-center justify-center text-5xl"
                 >
-                  {photo ? (
-                    <img src={photo} alt={profile.name} className="w-full h-full object-cover" />
-                  ) : (
-                    "🎵"
-                  )}
+                  <PhotoWithFallback src={photo} alt={profile.name} />
                 </button>
 
                 <div className="p-5">

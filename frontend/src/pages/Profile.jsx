@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { coverPhotoUrl, mediaUrl } from "../utils/media.js";
+import PhotoWithFallback from "../components/PhotoWithFallback.jsx";
 
 export default function Profile() {
   const { id } = useParams();
@@ -91,11 +92,7 @@ export default function Profile() {
 
       <div className="bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl overflow-hidden">
         <div className="h-72 bg-[var(--jm-surface-2)] flex items-center justify-center text-6xl">
-          {photo ? (
-            <img src={photo} alt={profile.name} className="w-full h-full object-cover" />
-          ) : (
-            "🎵"
-          )}
+          <PhotoWithFallback src={photo} alt={profile.name} />
         </div>
 
         <div className="p-5">

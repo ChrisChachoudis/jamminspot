@@ -91,6 +91,9 @@ const userSchema = new mongoose.Schema(
     // Friends, Messages) light.
     releases: [releaseSchema],
 
+    // Optional page where other members can donate to this user.
+    donationUrl: { type: String, trim: true, maxlength: 300 },
+
     onboardingComplete: { type: Boolean, default: false },
 
     // Legal consent: which version of the Terms/Privacy Policy the user
@@ -127,6 +130,7 @@ userSchema.methods.toPublicProfile = function toPublicProfile() {
     trackCount:
       this.releases?.reduce((sum, release) => sum + release.tracks.length, 0) || 0,
     premium: this.premium,
+    donationUrl: this.donationUrl || null,
   };
 };
 

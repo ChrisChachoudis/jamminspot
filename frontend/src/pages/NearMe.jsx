@@ -6,6 +6,7 @@ import PlaceAutocomplete from "../components/PlaceAutocomplete.jsx";
 import { searchCountries, searchCities } from "../api/geocoding.js";
 import { coverPhotoUrl } from "../utils/media.js";
 import PhotoWithFallback from "../components/PhotoWithFallback.jsx";
+import DonateButton from "../components/DonateButton.jsx";
 
 // Facebook-Marketplace-style radius picker — a plain km list, not tied to
 // the backend's same_city/nearby/... distance bands (those describe a
@@ -207,7 +208,8 @@ export default function NearMe() {
             const { profile, compatibility, distanceKm } = current;
             const photo = coverPhotoUrl(profile.media, profile.profilePhotoId);
             return (
-              <div className="w-full max-w-sm bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl overflow-hidden">
+              <div className="relative w-full max-w-sm bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl overflow-hidden">
+                <DonateButton url={profile.donationUrl} name={profile.name} />
                 <button
                   onClick={() => navigate(`/profile/${profile.id}`)}
                   className="w-full h-80 bg-[var(--jm-surface-2)] flex items-center justify-center text-5xl"

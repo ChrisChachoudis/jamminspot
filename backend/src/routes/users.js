@@ -7,6 +7,7 @@ import Message from "../models/Message.js";
 import Report, { REPORT_REASONS } from "../models/Report.js";
 import bcrypt from "bcryptjs";
 import { TERMS_VERSION } from "../config/legal.js";
+import { normalizeDonationUrl } from "../utils/donation.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadMedia, uploadRelease, mediaTypeFromMime } from "../middleware/upload.js";
@@ -34,6 +35,18 @@ router.get(
       termsAccepted: user.termsVersion === TERMS_VERSION,
       termsVersion: TERMS_VERSION,
     });
+  })
+);
+
+// PATCH /users/me/donation { url } — set (or clear, with an empty url) the
+// link where other members can donate to you.
+router.patch(
+  "/me/donation",
+  asyncHandler(async (req, res) => {
+    const { url, error } = normalizeDonationUrl(req.body?.url);
+    if (error) return res.status(400).json({ error });
+    await User.updateOne({ _id: req.userId }, { donationUrl: url });
+    res.json({ donationUrl: url || null });
   })
 );
 

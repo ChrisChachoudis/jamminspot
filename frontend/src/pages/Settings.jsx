@@ -5,13 +5,35 @@ import { useAuth } from "../context/AuthContext.jsx";
 import Avatar from "../components/Avatar.jsx";
 
 export default function Settings() {
-  const { logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [blocked, setBlocked] = useState([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [donationUrl, setDonationUrl] = useState("");
+  const [donationMsg, setDonationMsg] = useState("");
+  const [donationSaving, setDonationSaving] = useState(false);
+
+  useEffect(() => {
+    setDonationUrl(user?.donationUrl || "");
+  }, [user?.donationUrl]);
+
+  async function saveDonation() {
+    setDonationMsg("");
+    setDonationSaving(true);
+    try {
+      const { data } = await api.patch("/users/me/donation", { url: donationUrl });
+      setDonationUrl(data.donationUrl || "");
+      await refreshUser();
+      setDonationMsg(data.donationUrl ? "Saved — the donate button now shows on your profile." : "Donate button removed.");
+    } catch (err) {
+      setDonationMsg(err.response?.data?.error || "Could not save the link");
+    } finally {
+      setDonationSaving(false);
+    }
+  }
 
   useEffect(() => {
     api.get("/users/me/blocked").then(({ data }) => setBlocked(data.blocked));
@@ -53,6 +75,33 @@ export default function Settings() {
   return (
     <div className="max-w-xl mx-auto p-6">
       <h1 className="text-xl font-bold mb-4">Settings</h1>
+
+      <div className={card}>
+        <h2 className="font-semibold mb-1">Donations</h2>
+        <p className="text-sm text-[var(--jm-text-dim)] mb-3">
+          Let other musicians support you. Paste your own link (PayPal.me, Revolut.me, Ko-fi, Buy
+          Me a Coffee, Patreon, Liberapay, Venmo, Cash App or GitHub Sponsors) and a{" "}
+          <span className="font-semibold text-[var(--jm-rewind)]">$ donate</span> button will
+          appear on your profile. Money goes straight to you — Jamminspot never handles it.
+          Leave empty to hide the button.
+        </p>
+        <input
+          type="url"
+          value={donationUrl}
+          onChange={(e) => setDonationUrl(e.target.value)}
+          placeholder="https://paypal.me/yourname"
+          className="w-full bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--jm-jam)]"
+        />
+        {donationMsg && <p className="text-xs text-[var(--jm-text-dim)] mt-2">{donationMsg}</p>}
+        <button
+          type="button"
+          onClick={saveDonation}
+          disabled={donationSaving}
+          className="btn-jam px-6 py-2 !mt-3 text-sm disabled:opacity-60"
+        >
+          {donationSaving ? "Saving…" : "Save"}
+        </button>
+      </div>
 
       <div className={card}>
         <h2 className="font-semibold mb-2">Legal</h2>

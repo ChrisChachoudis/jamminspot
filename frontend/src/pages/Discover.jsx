@@ -4,6 +4,7 @@ import api from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { coverPhotoUrl } from "../utils/media.js";
 import PhotoWithFallback from "../components/PhotoWithFallback.jsx";
+import DonateButton from "../components/DonateButton.jsx";
 
 export default function Discover() {
   const [results, setResults] = useState([]);
@@ -98,7 +99,8 @@ export default function Discover() {
         </div>
       )}
 
-      <div className="w-full max-w-sm bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl overflow-hidden">
+      <div className="relative w-full max-w-sm bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl overflow-hidden">
+        <DonateButton url={profile.donationUrl} name={profile.name} />
         <button
           onClick={() => navigate(`/profile/${profile.id}`)}
           className="w-full h-80 bg-[var(--jm-surface-2)] flex items-center justify-center text-5xl"

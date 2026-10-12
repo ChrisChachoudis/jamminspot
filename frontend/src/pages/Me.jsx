@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import DonateButton from "../components/DonateButton.jsx";
 import { Link } from "react-router-dom";
 import api from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -342,7 +343,8 @@ export default function Me() {
 
   return (
     <div className="max-w-xl mx-auto p-6">
-      <div className="bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl overflow-hidden">
+      <div className="relative bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-2xl overflow-hidden">
+        <DonateButton url={user.donationUrl} name={user.name} />
         <div className="h-72 bg-[var(--jm-surface-2)] flex items-center justify-center text-6xl">
           {photo ? (
             <img src={photo} alt={user.name} className="w-full h-full object-cover" />

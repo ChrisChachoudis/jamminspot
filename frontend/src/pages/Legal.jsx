@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 // Update when the Terms/Privacy text changes materially, and bump
 // TERMS_VERSION in backend/src/config/legal.js to the same date so existing
 // users are asked to accept again.
-export const TERMS_VERSION = "2026-10-12";
+export const TERMS_VERSION = "2026-10-13";
 
 // Fill these in before launch — they appear in the legal text.
 const CONTACT_EMAIL = "support@jamminspot.app";
@@ -104,7 +104,20 @@ function Terms() {
         </p>
       </Section>
 
-      <Section title="7. Premium">
+      <Section title="7. Donations between members">
+        <p>
+          Members may add a link to their own page on a third-party service (for example PayPal,
+          Revolut or Ko-fi) so other members can send them voluntary donations. Donations are
+          gifts made directly between members through that third-party service and under its
+          terms. {OPERATOR} does not process, hold or guarantee any payment, does not verify who
+          owns a link, takes no fee, and cannot refund or recover donations. Donating gives you
+          no right to goods, services or anything else in return, and you should only donate to
+          people you trust. Recipients are responsible for any taxes that apply to what they
+          receive, and must not use donation links to mislead others or for scams.
+        </p>
+      </Section>
+
+      <Section title="8. Premium">
         <p>
           Some features (such as messaging musicians you haven't Jammed with) may require a paid
           Premium plan. Prices, billing period and renewal terms are shown at purchase. Unless
@@ -114,7 +127,7 @@ function Terms() {
         </p>
       </Section>
 
-      <Section title="8. AI features">
+      <Section title="9. AI features">
         <p>
           {OPERATOR} uses artificial intelligence to suggest profile text, conversation openers
           and music recommendations. These suggestions may be inaccurate. Review them before
@@ -124,7 +137,7 @@ function Terms() {
         </p>
       </Section>
 
-      <Section title="9. Safety, reports and enforcement">
+      <Section title="10. Safety, reports and enforcement">
         <p>
           You can block or report any member. We may remove content, limit features, suspend or
           terminate accounts that break these Terms or the Community Guidelines, or that we
@@ -135,7 +148,7 @@ function Terms() {
         </p>
       </Section>
 
-      <Section title="10. Copyright complaints">
+      <Section title="11. Copyright complaints">
         <p>
           If you believe content on {OPERATOR} infringes your copyright, email {CONTACT_EMAIL}{" "}
           with: what work is infringed, where the content is, your contact details, and a
@@ -144,7 +157,7 @@ function Terms() {
         </p>
       </Section>
 
-      <Section title="11. Availability and changes">
+      <Section title="12. Availability and changes">
         <p>
           The service is provided "as is" and "as available". We try to keep it running, but we
           do not promise it will be uninterrupted or error-free, and features may change or end.
@@ -153,7 +166,7 @@ function Terms() {
         </p>
       </Section>
 
-      <Section title="12. Liability">
+      <Section title="13. Liability">
         <p>
           To the fullest extent the law allows, {OPERATOR} is not liable for indirect or
           consequential losses, lost profits or data, or for disputes between members, and our
@@ -164,7 +177,7 @@ function Terms() {
         </p>
       </Section>
 
-      <Section title="13. Governing law and contact">
+      <Section title="14. Governing law and contact">
         <p>
           These Terms are governed by the laws of Greece, and the courts of Greece have
           jurisdiction, without affecting any consumer protections you have in your country of
@@ -190,7 +203,7 @@ function Privacy() {
         <Bullets
           items={[
             "Account data: email, password (stored only as a one-way hash), name, and your acceptance of our Terms (version and time).",
-            "Profile data you choose to add: bio, instruments, genres, goals, specialties, city/country and approximate coordinates, photos, videos, music and releases.",
+            "Profile data you choose to add: bio, instruments, genres, goals, specialties, city/country and approximate coordinates, photos, videos, music and releases, and an optional donation link (shown publicly on your profile).",
             "Market data: listings, prices, photos and audio you post.",
             "Activity: your likes, skips, Jams, track likes, messages you send and receive, blocks and reports.",
             "Technical data: IP address and basic request logs for security and rate limiting. We use your browser's local storage to keep you signed in.",

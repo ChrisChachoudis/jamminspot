@@ -16,11 +16,15 @@ import Profile from "./pages/Profile.jsx";
 import Discography from "./pages/Discography.jsx";
 import Seller from "./pages/Seller.jsx";
 import Listing from "./pages/Listing.jsx";
+import Settings from "./pages/Settings.jsx";
+import Legal from "./pages/Legal.jsx";
+import TermsGate from "./components/TermsGate.jsx";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="p-10 text-center text-[var(--jm-text-dim)]">Loading…</div>;
   if (!user) return <Navigate to="/login" replace />;
+  if (user.termsAccepted === false) return <TermsGate />;
   if (!user.onboardingComplete) return <Navigate to="/onboarding" replace />;
   return children;
 }
@@ -31,6 +35,9 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/terms" element={<Legal />} />
+      <Route path="/privacy" element={<Legal />} />
+      <Route path="/guidelines" element={<Legal />} />
 
       <Route element={<Layout />}>
         <Route
@@ -86,6 +93,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Messages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           }
         />

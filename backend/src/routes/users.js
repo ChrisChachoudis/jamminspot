@@ -1,6 +1,12 @@
 import { Router } from "express";
 import path from "node:path";
 import User from "../models/User.js";
+import Listing from "../models/Listing.js";
+import Conversation from "../models/Conversation.js";
+import Message from "../models/Message.js";
+import Report, { REPORT_REASONS } from "../models/Report.js";
+import bcrypt from "bcryptjs";
+import { TERMS_VERSION } from "../config/legal.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadMedia, uploadRelease, mediaTypeFromMime } from "../middleware/upload.js";
@@ -22,7 +28,102 @@ router.get(
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ user: user.toPublicProfile(), onboardingComplete: user.onboardingComplete });
+    res.json({
+      user: user.toPublicProfile(),
+      onboardingComplete: user.onboardingComplete,
+      termsAccepted: user.termsVersion === TERMS_VERSION,
+      termsVersion: TERMS_VERSION,
+    });
+  })
+);
+
+// POST /users/me/accept-terms — existing users (or everyone, after the Terms
+// change) confirm the current Terms/Privacy Policy and that they are 18+.
+router.post(
+  "/me/accept-terms",
+  asyncHandler(async (req, res) => {
+    if (req.body.acceptedTerms !== true || req.body.confirmedAge !== true) {
+      return res.status(400).json({ error: "You must accept the Terms and confirm you are 18 or older" });
+    }
+    await User.updateOne(
+      { _id: req.userId },
+      { termsVersion: TERMS_VERSION, termsAcceptedAt: new Date() }
+    );
+    res.json({ ok: true });
+  })
+);
+
+// GET /users/me/export — everything we hold about the account, as JSON
+// (data portability). The password hash is never included.
+router.get(
+  "/me/export",
+  asyncHandler(async (req, res) => {
+    const [user, listings, conversations] = await Promise.all([
+      User.findById(req.userId).lean(),
+      Listing.find({ seller: req.userId }).lean(),
+      Conversation.find({ participants: req.userId }).lean(),
+    ]);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    delete user.passwordHash;
+
+    const messages = await Message.find({
+      conversation: { $in: conversations.map((c) => c._id) },
+    })
+      .sort({ createdAt: 1 })
+      .lean();
+
+    res.setHeader("Content-Disposition", 'attachment; filename="jamminspot-data.json"');
+    res.json({ exportedAt: new Date().toISOString(), account: user, listings, conversations, messages });
+  })
+);
+
+// DELETE /users/me { password } — permanently deletes the account, its
+// uploaded files, listings, conversations and traces in other users' data.
+router.delete(
+  "/me",
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const password = req.body?.password;
+    if (typeof password !== "string" || !(await bcrypt.compare(password, user.passwordHash))) {
+      return res.status(401).json({ error: "Incorrect password" });
+    }
+
+    const listings = await Listing.find({ seller: user._id });
+    const urls = [
+      ...user.media.map((m) => m.url),
+      ...user.releases.flatMap((r) => [r.coverUrl, ...r.tracks.map((t) => t.audioUrl)]),
+      ...listings.flatMap((l) => [...l.photos.map((p) => p.url), ...l.audio.map((a) => a.url)]),
+    ];
+    for (const url of urls) await deleteStoredFile(url);
+
+    const conversations = await Conversation.find({ participants: user._id }).select("_id");
+    await Message.deleteMany({ conversation: { $in: conversations.map((c) => c._id) } });
+    await Conversation.deleteMany({ participants: user._id });
+    await Listing.deleteMany({ seller: user._id });
+    await Report.deleteMany({ reporter: user._id });
+    await User.updateMany(
+      {},
+      { $pull: { swipes: { user: user._id }, blockedUsers: user._id } }
+    );
+    // Nested array update only works on documents that have releases.
+    await User.updateMany(
+      { "releases.tracks.likes": user._id },
+      { $pull: { "releases.$[].tracks.$[].likes": user._id } }
+    );
+    await User.deleteOne({ _id: user._id });
+
+    res.json({ ok: true });
+  })
+);
+
+// GET /users/me/blocked — the people this user has blocked.
+router.get(
+  "/me/blocked",
+  asyncHandler(async (req, res) => {
+    const me = await User.findById(req.userId).populate("blockedUsers");
+    res.json({ blocked: (me?.blockedUsers || []).map((u) => u.toPublicProfile()) });
   })
 );
 
@@ -390,6 +491,53 @@ router.post(
     await artist.save();
 
     res.json({ liked, likeCount: track.likes.length });
+  })
+);
+
+// POST /users/:id/report { reason, details } — flag a profile for review.
+router.post(
+  "/:id/report",
+  asyncHandler(async (req, res) => {
+    const { reason, details } = req.body;
+    if (!REPORT_REASONS.includes(reason)) {
+      return res.status(400).json({ error: `reason must be one of: ${REPORT_REASONS.join(", ")}` });
+    }
+    if (req.params.id === req.userId) {
+      return res.status(400).json({ error: "You can't report yourself" });
+    }
+    const target = await User.findById(req.params.id).select("_id");
+    if (!target) return res.status(404).json({ error: "User not found" });
+
+    await Report.create({
+      reporter: req.userId,
+      reported: target._id,
+      reason,
+      details: typeof details === "string" ? details.slice(0, 1000) : "",
+    });
+    res.status(201).json({ ok: true });
+  })
+);
+
+// POST /users/:id/block — hide each other everywhere (Discover, Jams, chat).
+router.post(
+  "/:id/block",
+  asyncHandler(async (req, res) => {
+    if (req.params.id === req.userId) {
+      return res.status(400).json({ error: "You can't block yourself" });
+    }
+    const target = await User.findById(req.params.id).select("_id");
+    if (!target) return res.status(404).json({ error: "User not found" });
+    await User.updateOne({ _id: req.userId }, { $addToSet: { blockedUsers: target._id } });
+    res.json({ blocked: true });
+  })
+);
+
+// DELETE /users/:id/block — unblock.
+router.delete(
+  "/:id/block",
+  asyncHandler(async (req, res) => {
+    await User.updateOne({ _id: req.userId }, { $pull: { blockedUsers: req.params.id } });
+    res.json({ blocked: false });
   })
 );
 

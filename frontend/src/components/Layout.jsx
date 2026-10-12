@@ -72,6 +72,7 @@ const MORE_LINKS = [
   { to: "/jams", label: "Jam requests" },
   { to: "/friends", label: "Friends" },
   { to: "/me", label: "My profile" },
+  { to: "/settings", label: "Settings" },
 ];
 
 export default function Layout() {
@@ -117,6 +118,12 @@ export default function Layout() {
           </button>
           <button onClick={() => navigate("/me")} title={user?.name || "Me"}>
             <Avatar media={user?.media} profilePhotoId={user?.profilePhotoId} name={user?.name} size={36} />
+          </button>
+          <button
+            onClick={() => navigate("/settings")}
+            className="hidden md:block text-xs text-[var(--jm-text-dim)] hover:text-[var(--jm-text)]"
+          >
+            Settings
           </button>
           <button
             onClick={() => {

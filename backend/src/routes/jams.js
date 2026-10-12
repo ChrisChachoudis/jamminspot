@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 import { computeCompatibility } from "../utils/matching.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getBlockedIds } from "../utils/blocks.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -22,7 +23,12 @@ router.get(
       .populate("participants")
       .sort({ "lastMessage.sentAt": -1, jamAt: -1 });
 
-    const jams = conversations.map((conversation) => {
+    const blocked = await getBlockedIds(req.userId);
+    const visible = conversations.filter((c) =>
+      c.participants.every((p) => p._id.toString() === req.userId || !blocked.has(p._id.toString()))
+    );
+
+    const jams = visible.map((conversation) => {
       const other = conversation.participants.find(
         (p) => p._id.toString() !== req.userId
       );

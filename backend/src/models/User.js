@@ -92,6 +92,13 @@ const userSchema = new mongoose.Schema(
     releases: [releaseSchema],
 
     onboardingComplete: { type: Boolean, default: false },
+
+    // Legal consent: which version of the Terms/Privacy Policy the user
+    // accepted, and when. Age confirmation is part of accepting.
+    termsVersion: { type: String },
+    termsAcceptedAt: { type: Date },
+
+    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     premium: { type: Boolean, default: false },
 
     // Swipe history feeds both the "already seen" filter and future

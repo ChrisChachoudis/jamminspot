@@ -4,6 +4,7 @@ import Conversation from "../models/Conversation.js";
 import { requireAuth } from "../middleware/auth.js";
 import { computeCompatibility, distanceKm } from "../utils/matching.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getBlockedIds } from "../utils/blocks.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -31,6 +32,7 @@ router.get(
     const { specialty, instrument, genre, goal, maxDistanceKm, limit = 20 } = req.query;
 
     const excludeIds = await getFriendIds(req.userId);
+    for (const id of await getBlockedIds(req.userId)) excludeIds.add(id);
     excludeIds.add(me._id.toString());
 
     const query = { _id: { $nin: Array.from(excludeIds) } };
@@ -82,6 +84,7 @@ router.get(
     }
 
     const excludeIds = await getFriendIds(req.userId);
+    for (const id of await getBlockedIds(req.userId)) excludeIds.add(id);
     excludeIds.add(me._id.toString());
 
     const candidates = await User.find({
@@ -123,6 +126,9 @@ router.post(
       User.findById(targetUserId),
     ]);
     if (!me || !target) return res.status(404).json({ error: "User not found" });
+    if ((await getBlockedIds(req.userId)).has(targetUserId)) {
+      return res.status(403).json({ error: "You can't interact with this user" });
+    }
 
     me.swipes.push({ user: target._id, action });
     await me.save();

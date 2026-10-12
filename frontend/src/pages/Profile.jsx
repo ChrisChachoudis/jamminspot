@@ -11,6 +11,10 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [jamStatus, setJamStatus] = useState(null); // null | "sending" | "sent" | "matched" | "error"
   const [listingCount, setListingCount] = useState(0);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [safetyNotice, setSafetyNotice] = useState("");
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -35,6 +39,31 @@ export default function Profile() {
   const photo = coverPhotoUrl(profile.media, profile.profilePhotoId);
   const otherMedia = (profile.media || []).filter((m) => mediaUrl(m) !== photo);
   const isSelf = user?.id === profile.id;
+
+  async function submitReport() {
+    try {
+      await api.post(`/users/${profile.id}/report`, {
+        reason: reportReason,
+        details: reportDetails,
+      });
+      setReportOpen(false);
+      setReportReason("");
+      setReportDetails("");
+      setSafetyNotice("Thanks — we'll review this report. Consider blocking them too.");
+    } catch (err) {
+      setSafetyNotice(err.response?.data?.error || "Could not send the report");
+    }
+  }
+
+  async function blockUser() {
+    if (!window.confirm(`Block ${profile.name}? You won't see each other any more.`)) return;
+    try {
+      await api.post(`/users/${profile.id}/block`);
+      navigate("/discover");
+    } catch (err) {
+      setSafetyNotice(err.response?.data?.error || "Could not block this user");
+    }
+  }
 
   async function addForJam() {
     setJamStatus("sending");
@@ -211,6 +240,52 @@ export default function Profile() {
                 <p className="text-xs text-[var(--jm-jam)] mt-2">
                   You're both in — check Friends to start chatting.
                 </p>
+              )}
+
+              <div className="flex gap-4 mt-5 text-xs text-[var(--jm-text-dim)]">
+                <button type="button" onClick={() => setReportOpen((o) => !o)} className="underline">
+                  Report
+                </button>
+                <button type="button" onClick={blockUser} className="underline">
+                  Block
+                </button>
+              </div>
+              {safetyNotice && (
+                <p className="text-xs text-[var(--jm-text-dim)] mt-2">{safetyNotice}</p>
+              )}
+              {reportOpen && (
+                <div className="mt-3 bg-[var(--jm-surface-2)] border border-[var(--jm-border)] rounded-xl p-3">
+                  <select
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="w-full bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">Why are you reporting this profile?</option>
+                    <option value="spam">Spam</option>
+                    <option value="fake_profile">Fake profile</option>
+                    <option value="harassment">Harassment or hate</option>
+                    <option value="inappropriate_content">Inappropriate content</option>
+                    <option value="scam">Scam or fraud</option>
+                    <option value="underage">Looks under 18</option>
+                    <option value="other">Something else</option>
+                  </select>
+                  <textarea
+                    value={reportDetails}
+                    onChange={(e) => setReportDetails(e.target.value)}
+                    maxLength={1000}
+                    rows={3}
+                    placeholder="Add details (optional)"
+                    className="w-full mt-2 bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-lg px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={submitReport}
+                    disabled={!reportReason}
+                    className="btn-jam !mt-2 px-5 disabled:opacity-50"
+                  >
+                    Send report
+                  </button>
+                </div>
               )}
             </>
           )}

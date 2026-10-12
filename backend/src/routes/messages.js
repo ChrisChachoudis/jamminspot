@@ -4,6 +4,7 @@ import Message from "../models/Message.js";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getBlockedIds } from "../utils/blocks.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -25,7 +26,12 @@ router.get(
       .populate("participants")
       .sort({ "lastMessage.sentAt": -1, updatedAt: -1 });
 
-    const list = conversations.map((c) => ({
+    const blocked = await getBlockedIds(req.userId);
+    const visible = conversations.filter((c) =>
+      c.participants.every((p) => p._id.toString() === req.userId || !blocked.has(p._id.toString()))
+    );
+
+    const list = visible.map((c) => ({
       conversationId: c._id,
       isJam: c.isJam,
       lastMessage: c.lastMessage,
@@ -56,6 +62,10 @@ router.post(
       User.findById(targetUserId),
     ]);
     if (!me || !target) return res.status(404).json({ error: "User not found" });
+
+    if ((await getBlockedIds(req.userId)).has(targetUserId)) {
+      return res.status(403).json({ error: "You can't message this user" });
+    }
 
     let conversation = await Conversation.findOne({
       participants: { $all: [req.userId, targetUserId] },
@@ -117,6 +127,11 @@ router.post(
       req.userId
     );
     if (error) return res.status(status).json({ error });
+
+    const blocked = await getBlockedIds(req.userId);
+    if (conversation.participants.some((p) => blocked.has(p.toString()))) {
+      return res.status(403).json({ error: "You can't message this user" });
+    }
 
     const message = await Message.create({
       conversation: conversation._id,

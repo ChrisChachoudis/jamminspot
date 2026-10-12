@@ -10,7 +10,9 @@ export function AuthProvider({ children }) {
   async function refreshUser() {
     try {
       const { data } = await api.get("/users/me");
-      setUser({ ...data.user, onboardingComplete: data.onboardingComplete });
+      setUser({ ...data.user, onboardingComplete: data.onboardingComplete,
+        termsAccepted: data.termsAccepted,
+      });
     } catch {
       setUser(null);
     } finally {

@@ -53,6 +53,10 @@ export default function Login() {
         <p className="auth-switch">
           No account yet? <Link to="/register">Create one</Link>
         </p>
+        <p className="auth-switch !mt-2 !text-xs">
+          <Link to="/terms">Terms</Link> · <Link to="/privacy">Privacy</Link> ·{" "}
+          <Link to="/guidelines">Guidelines</Link>
+        </p>
       </form>
     </div>
   );

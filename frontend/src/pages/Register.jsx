@@ -2,11 +2,14 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import ConsentCheckboxes from "../components/ConsentCheckboxes.jsx";
 
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [accepted, setAccepted] = useState(false);
+  const [ofAge, setOfAge] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
@@ -17,7 +20,13 @@ export default function Register() {
     setError("");
     setSubmitting(true);
     try {
-      const { data } = await api.post("/auth/register", { name, email, password });
+      const { data } = await api.post("/auth/register", {
+        name,
+        email,
+        password,
+        acceptedTerms: accepted,
+        confirmedAge: ofAge,
+      });
       await login(data.token);
       navigate("/onboarding");
     } catch (err) {
@@ -48,9 +57,16 @@ export default function Register() {
           required
         />
 
+        <ConsentCheckboxes
+          accepted={accepted}
+          setAccepted={setAccepted}
+          ofAge={ofAge}
+          setOfAge={setOfAge}
+        />
+
         {error && <p className="form-error">{error}</p>}
 
-        <button type="submit" className="btn-jam" disabled={submitting}>
+        <button type="submit" className="btn-jam" disabled={submitting || !accepted || !ofAge}>
           {submitting ? "Creating account…" : "Create account"}
         </button>
 

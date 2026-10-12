@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { connectDB } from "./config/db.js";
 import { UPLOADS_DIR } from "./middleware/upload.js";
 import { serveStoredFile } from "./utils/fileStore.js";
@@ -21,6 +23,18 @@ process.on("unhandledRejection", (err) => {
 });
 
 const app = express();
+app.disable("x-powered-by");
+// Render sits behind a proxy; trust it so rate limiting sees the real client IP.
+app.set("trust proxy", 1);
+
+// Brute-force protection for login/register.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts. Please try again in a few minutes." },
+});
 
 // CLIENT_ORIGIN accepts a comma-separated list so both the local dev
 // frontend and the deployed one can be allowed at once.
@@ -28,6 +42,8 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:5173")
   .split(",")
   .map((o) => o.trim());
 
+// Uploaded media is loaded cross-origin by the frontend, so allow it.
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -43,7 +59,7 @@ app.get("/files/:id", asyncHandler(serveStoredFile));
 // Legacy path: files uploaded before GridFS (local dev only; wiped on Render).
 app.use("/uploads", express.static(UPLOADS_DIR));
 
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/discover", discoverRoutes);
 app.use("/api/jams", jamsRoutes);

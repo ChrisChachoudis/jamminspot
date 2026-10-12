@@ -6,16 +6,31 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const COMMON_PASSWORDS = new Set([
+  "12345678", "123456789", "1234567890", "password", "password1", "password123",
+  "qwertyui", "qwerty123", "11111111", "iloveyou", "abc12345", "00000000",
+]);
+
 router.post(
   "/register",
   asyncHandler(async (req, res) => {
-    const { email, password, name } = req.body;
+    const { email, password } = req.body;
+    // Names are rendered as plain text by React, but strip tags so they never
+    // leak into emails or other non-React surfaces later.
+    const name = typeof req.body.name === "string" ? req.body.name.replace(/[<>]/g, "").trim().slice(0, 60) : undefined;
 
-    if (!email || !password) {
+    if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
       return res.status(400).json({ error: "email and password are required" });
+    }
+    if (!EMAIL_RE.test(email.trim()) || email.length > 254) {
+      return res.status(400).json({ error: "Please enter a valid email address" });
     }
     if (password.length < 8) {
       return res.status(400).json({ error: "password must be at least 8 characters" });
+    }
+    if (password.length > 72 || COMMON_PASSWORDS.has(password.toLowerCase())) {
+      return res.status(400).json({ error: "Please choose a stronger password (max 72 characters)" });
     }
 
     const existing = await User.findOne({ email: email.toLowerCase() });

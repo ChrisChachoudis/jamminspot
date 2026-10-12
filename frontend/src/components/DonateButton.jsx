@@ -1,13 +1,12 @@
 import { useState } from "react";
 
 // Round "$" badge with a tiny "donate" label, pinned to the top-right corner
-// of the nearest `relative` parent. Only renders when the member has set a
-// donation link. Donations go straight to the member's own page — Jamminspot
-// never handles the money — so we warn before leaving.
+// of the nearest `relative` parent. Shown on every member; without a link it
+// explains they haven't set up donations yet. Donations go straight to the
+// member's own page — Jamminspot never handles the money — so we warn before
+// leaving.
 export default function DonateButton({ url, name }) {
   const [open, setOpen] = useState(false);
-  if (!url) return null;
-
   return (
     <>
       <button
@@ -20,7 +19,7 @@ export default function DonateButton({ url, name }) {
         aria-label={`Donate to ${name || "this musician"}`}
         className="absolute top-3 right-3 z-10 flex flex-col items-center gap-0.5 group"
       >
-        <span className="w-10 h-10 rounded-full bg-[var(--jm-rewind)] text-[#2e1c02] flex items-center justify-center text-lg font-extrabold shadow-lg ring-2 ring-black/30 group-hover:scale-105 transition-transform">
+        <span className={`w-10 h-10 rounded-full bg-[var(--jm-rewind)] text-[#2e1c02] ${url ? "" : "opacity-70"} flex items-center justify-center text-lg font-extrabold shadow-lg ring-2 ring-black/30 group-hover:scale-105 transition-transform`}>
           $
         </span>
         <span className="text-[10px] leading-none font-semibold text-white drop-shadow">donate</span>
@@ -36,6 +35,22 @@ export default function DonateButton({ url, name }) {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold mb-2">Donate to {name || "this musician"}</h2>
+            {!url ? (
+              <>
+                <p className="text-sm text-[var(--jm-text-dim)] mb-4">
+                  {name || "This musician"} hasn't set up donations yet. They can add a donation
+                  link in Settings.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="btn-jam w-full !mt-0 py-3"
+                >
+                  Close
+                </button>
+              </>
+            ) : (
+              <>
             <p className="text-sm text-[var(--jm-text-dim)] mb-4">
               You'll leave Jamminspot and go to {name ? `${name}'s` : "their"} own donation page.
               Donations are voluntary and handled entirely by that service — Jamminspot isn't
@@ -59,6 +74,8 @@ export default function DonateButton({ url, name }) {
                 Cancel
               </button>
             </div>
+              </>
+            )}
           </div>
         </div>
       )}

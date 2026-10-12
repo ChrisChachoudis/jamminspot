@@ -80,10 +80,10 @@ export default function Settings() {
         <h2 className="font-semibold mb-1">Donations</h2>
         <p className="text-sm text-[var(--jm-text-dim)] mb-3">
           Let other musicians support you. Paste your own link (PayPal.me, Revolut.me, Ko-fi, Buy
-          Me a Coffee, Patreon, Liberapay, Venmo, Cash App or GitHub Sponsors) and a{" "}
-          <span className="font-semibold text-[var(--jm-rewind)]">$ donate</span> button will
-          appear on your profile. Money goes straight to you — Jamminspot never handles it.
-          Leave empty to hide the button.
+          Me a Coffee, Patreon, Liberapay, Venmo, Cash App or GitHub Sponsors) and the{" "}
+          <span className="font-semibold text-[var(--jm-rewind)]">$ donate</span> button on your
+          profile will lead people to it. Money goes straight to you — Jamminspot never handles
+          it. Until you add a link, the button tells visitors you haven't set up donations yet.
         </p>
         <input
           type="url"

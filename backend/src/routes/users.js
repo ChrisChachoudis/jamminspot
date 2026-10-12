@@ -1,10 +1,10 @@
 import { Router } from "express";
-import fs from "node:fs";
 import path from "node:path";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadMedia, uploadRelease, mediaTypeFromMime, UPLOADS_DIR } from "../middleware/upload.js";
+import { uploadMedia, uploadRelease, mediaTypeFromMime } from "../middleware/upload.js";
+import { storeUploadedFile, deleteStoredFile } from "../utils/fileStore.js";
 import { computeCompatibility } from "../utils/matching.js";
 import {
   SPECIALTIES,
@@ -148,7 +148,7 @@ router.post(
 
     const item = {
       type: mediaTypeFromMime(req.file.mimetype),
-      url: `/uploads/${req.userId}/${req.file.filename}`,
+      url: await storeUploadedFile(req.file),
     };
     user.media.push(item);
     await user.save();
@@ -166,8 +166,7 @@ router.delete(
     const item = user.media.id(req.params.mediaId);
     if (!item) return res.status(404).json({ error: "Media item not found" });
 
-    const filePath = path.join(UPLOADS_DIR, req.userId, path.basename(item.url));
-    fs.unlink(filePath, () => {});
+    await deleteStoredFile(item.url);
 
     if (user.profilePhotoId?.toString() === req.params.mediaId) {
       user.profilePhotoId = null;
@@ -255,12 +254,16 @@ router.post(
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    const coverUrl = await storeUploadedFile(coverFile);
+    const audioUrls = [];
+    for (const file of audioFiles) audioUrls.push(await storeUploadedFile(file));
+
     user.releases.push({
       title: title.trim(),
-      coverUrl: `/uploads/${req.userId}/releases/${coverFile.filename}`,
+      coverUrl,
       tracks: audioFiles.map((file, i) => ({
         title: titleFromFilename(file.originalname),
-        audioUrl: `/uploads/${req.userId}/releases/${file.filename}`,
+        audioUrl: audioUrls[i],
         genres: trackGenres[i] || [],
       })),
     });
@@ -324,10 +327,7 @@ router.delete(
     if (!release) return res.status(404).json({ error: "Release not found" });
 
     const urls = [release.coverUrl, ...release.tracks.map((t) => t.audioUrl)];
-    for (const url of urls) {
-      const filePath = path.join(UPLOADS_DIR, req.userId, "releases", path.basename(url));
-      fs.unlink(filePath, () => {});
-    }
+    for (const url of urls) await deleteStoredFile(url);
 
     release.deleteOne();
     await user.save();

@@ -44,8 +44,19 @@ body {
 
 /* --- Auth screens --- */
 
+/* iOS Safari zooms the page on focus for any input under 16px — keep
+   fields at 16px on phones so tapping one never jolts the layout. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 .auth-screen {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;

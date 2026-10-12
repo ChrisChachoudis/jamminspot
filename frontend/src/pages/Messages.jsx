@@ -4,7 +4,7 @@ import api from "../api/client.js";
 import Avatar from "../components/Avatar.jsx";
 
 export default function Messages() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(searchParams.get("conversation"));
   const [messages, setMessages] = useState([]);
@@ -36,6 +36,15 @@ export default function Messages() {
 
   const active = conversations.find((c) => c.conversationId === activeId);
   const displayedMusician = active?.musician || newTarget;
+  // On phones only one pane shows at a time: the conversation list, or the open chat.
+  const showChat = Boolean(activeId || targetUserId);
+
+  function backToList() {
+    setActiveId(null);
+    setMessages([]);
+    setNewTarget(null);
+    setSearchParams({});
+  }
 
   async function suggestOpener() {
     if (!targetUserId) return;
@@ -72,8 +81,10 @@ export default function Messages() {
   }
 
   return (
-    <div className="grid grid-cols-[280px_1fr_280px] h-[calc(100vh-64px)]">
-      <aside className="border-r border-[var(--jm-border)] overflow-y-auto">
+    <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] lg:grid-cols-[280px_1fr_280px] h-[calc(100dvh-8.75rem)] md:h-[calc(100dvh-64px)]">
+      <aside
+        className={`${showChat ? "hidden" : "block"} md:block border-r border-[var(--jm-border)] overflow-y-auto`}
+      >
         {conversations.map((c) => (
           <button
             key={c.conversationId}
@@ -108,7 +119,31 @@ export default function Messages() {
         )}
       </aside>
 
-      <section className="flex flex-col">
+      <section className={`${showChat ? "flex" : "hidden"} md:flex flex-col min-h-0`}>
+        <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b border-[var(--jm-border)]">
+          <button
+            type="button"
+            onClick={backToList}
+            className="px-2 py-1 text-lg"
+            aria-label="Back to conversations"
+          >
+            ←
+          </button>
+          {displayedMusician && (
+            <Link
+              to={`/profile/${displayedMusician.id}`}
+              className="flex items-center gap-2 min-w-0"
+            >
+              <Avatar
+                media={displayedMusician.media}
+                profilePhotoId={displayedMusician.profilePhotoId}
+                name={displayedMusician.name}
+                size={30}
+              />
+              <span className="font-semibold text-sm truncate">{displayedMusician.name}</span>
+            </Link>
+          )}
+        </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {messages.map((m) => (
             <div
@@ -161,7 +196,7 @@ export default function Messages() {
         </form>
       </section>
 
-      <aside className="border-l border-[var(--jm-border)] p-4">
+      <aside className="hidden lg:block border-l border-[var(--jm-border)] p-4">
         {displayedMusician ? (
           <div>
             <Link to={`/profile/${displayedMusician.id}`} className="flex items-center gap-3 mb-3">

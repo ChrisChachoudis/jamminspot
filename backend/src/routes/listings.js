@@ -4,6 +4,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadListingMedia } from "../middleware/upload.js";
 import { titleFromFilename } from "./users.js";
+import { storeUploadedFile, deleteStoredFile } from "../utils/fileStore.js";
 import { distanceKm } from "../utils/matching.js";
 
 const router = Router();
@@ -162,17 +163,21 @@ router.post(
       return res.status(400).json({ error: "At least one photo is required" });
     }
 
+    const photos = [];
+    for (const f of photoFiles) photos.push({ url: await storeUploadedFile(f) });
+    const audio = [];
+    for (const f of audioFiles) {
+      audio.push({ url: await storeUploadedFile(f), title: titleFromFilename(f.originalname) });
+    }
+
     const listing = await Listing.create({
       seller: req.userId,
       title: title.trim(),
       description: description?.trim() || "",
       price: priceNum,
       category,
-      photos: photoFiles.map((f) => ({ url: `/uploads/${req.userId}/listings/${f.filename}` })),
-      audio: audioFiles.map((f) => ({
-        url: `/uploads/${req.userId}/listings/${f.filename}`,
-        title: titleFromFilename(f.originalname),
-      })),
+      photos,
+      audio,
     });
 
     res.status(201).json({ listing: serializeListing(listing) });
@@ -219,6 +224,9 @@ router.delete(
   asyncHandler(async (req, res) => {
     const listing = await Listing.findOneAndDelete({ _id: req.params.id, seller: req.userId });
     if (!listing) return res.status(404).json({ error: "Listing not found" });
+
+    for (const p of listing.photos) await deleteStoredFile(p.url);
+    for (const a of listing.audio) await deleteStoredFile(a.url);
 
     const listings = await Listing.find({ seller: req.userId }).sort({ createdAt: -1 });
     res.json({ listings: listings.map(serializeListing) });

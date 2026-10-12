@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import { connectDB } from "./config/db.js";
 import { UPLOADS_DIR } from "./middleware/upload.js";
+import { serveStoredFile } from "./utils/fileStore.js";
+import { asyncHandler } from "./utils/asyncHandler.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import discoverRoutes from "./routes/discover.js";
@@ -37,6 +39,8 @@ app.use(
 app.use(express.json());
 
 app.get("/health", (req, res) => res.json({ ok: true }));
+app.get("/files/:id", asyncHandler(serveStoredFile));
+// Legacy path: files uploaded before GridFS (local dev only; wiped on Render).
 app.use("/uploads", express.static(UPLOADS_DIR));
 
 app.use("/api/auth", authRoutes);

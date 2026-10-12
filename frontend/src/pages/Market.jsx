@@ -13,6 +13,7 @@ export default function Market() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false); // phones only; desktop always shows them
 
   const [category, setCategory] = useState("");
   const [minPrice, setMinPrice] = useState("");
@@ -89,7 +90,23 @@ export default function Market() {
         Instruments, gear, services and more from other musicians.
       </p>
 
-      <div className="bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-xl p-4 mb-6">
+      <button
+        type="button"
+        onClick={() => setFiltersOpen((o) => !o)}
+        className="md:hidden w-full flex items-center justify-between bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-xl px-4 py-3 mb-3 text-sm font-semibold"
+      >
+        <span>
+          Filters
+          {(category || minPrice || maxPrice || city) && (
+            <span className="ml-2 text-[var(--jm-jam)]">· active</span>
+          )}
+        </span>
+        <span className="text-[var(--jm-text-dim)]">{filtersOpen ? "▲" : "▼"}</span>
+      </button>
+
+      <div
+        className={`${filtersOpen ? "block" : "hidden"} md:block bg-[var(--jm-surface)] border border-[var(--jm-border)] rounded-xl p-4 mb-6`}
+      >
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
             <label className="text-xs font-semibold text-[var(--jm-text-dim)] block mb-1">
@@ -187,7 +204,14 @@ export default function Market() {
         </div>
 
         <div className="flex gap-3 mt-4">
-          <button type="button" onClick={loadListings} className="btn-jam px-6 !mt-0">
+          <button
+            type="button"
+            onClick={() => {
+              setFiltersOpen(false);
+              loadListings();
+            }}
+            className="btn-jam px-6 !mt-0"
+          >
             Apply filters
           </button>
           <button

@@ -1,11 +1,12 @@
 import "dotenv/config";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import mongoose from "mongoose";
 import { connectDB } from "../src/config/db.js";
 import User from "../src/models/User.js";
 import Listing from "../src/models/Listing.js";
-import { UPLOADS_DIR } from "../src/middleware/upload.js";
+import { storeUploadedFile } from "../src/utils/fileStore.js";
 
 // Two listings each for the 10 musicians already created by seed.js — they
 // already span a good mix of nearby (Athens) and far-apart Greek cities
@@ -54,22 +55,19 @@ const LISTINGS_BY_EMAIL = {
   ],
 };
 
-const PLACEHOLDER_URL = "/uploads/market-seed/placeholder.png";
-
-function ensurePlaceholderPhoto() {
-  const dir = path.join(UPLOADS_DIR, "market-seed");
-  fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, "placeholder.png");
-  if (!fs.existsSync(file)) {
-    const base64 =
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
-    fs.writeFileSync(file, Buffer.from(base64, "base64"));
-  }
+// Stored in GridFS (same as real uploads) so it works against any database,
+// including production, regardless of which machine runs this script.
+async function storePlaceholderPhoto() {
+  const base64 =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+  const tmp = path.join(os.tmpdir(), "market-seed-placeholder.png");
+  fs.writeFileSync(tmp, Buffer.from(base64, "base64"));
+  return storeUploadedFile({ path: tmp, originalname: "placeholder.png", mimetype: "image/png" });
 }
 
 async function seedMarket() {
   await connectDB();
-  ensurePlaceholderPhoto();
+  const placeholderUrl = await storePlaceholderPhoto();
 
   const emails = Object.keys(LISTINGS_BY_EMAIL);
   const users = await User.find({ email: { $in: emails } });
@@ -95,7 +93,7 @@ async function seedMarket() {
         description: `${l.title} — posted by ${user.name} in ${user.location?.city || "Greece"}.`,
         price: l.price,
         category: l.category,
-        photos: [{ url: PLACEHOLDER_URL }],
+        photos: [{ url: placeholderUrl }],
         audio: [],
       });
       count++;

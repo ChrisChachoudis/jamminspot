@@ -1,15 +1,20 @@
+import { useState } from "react";
 import { coverPhotoUrl } from "../utils/media.js";
 
 export default function Avatar({ media, profilePhotoId, name, size = 40, className = "" }) {
   const photo = coverPhotoUrl(media, profilePhotoId);
+  const [failedSrc, setFailedSrc] = useState(null);
   const style = { width: size, height: size, minWidth: size };
 
-  if (photo) {
+  // If the stored file is gone (or fails to load), fall back to the initial
+  // instead of showing a broken-image icon.
+  if (photo && failedSrc !== photo) {
     return (
       <img
         src={photo}
         alt={name || ""}
         style={style}
+        onError={() => setFailedSrc(photo)}
         className={`rounded-full object-cover border border-[var(--jm-border)] ${className}`}
       />
     );
